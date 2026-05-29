@@ -48,6 +48,10 @@ export default function LandingPage() {
         <p className="sans text-xs mt-16" style={{ color: 'var(--muted)', opacity: 0.5 }}>
           &ldquo;Wie word je aan het worden?&rdquo; &mdash; Who are you becoming?
         </p>
+
+        <p className="sans text-xs mt-4" style={{ color: 'var(--accent)', opacity: 0.6 }}>
+          hello pascale — friday 7:30pm — whasssuup 👋
+        </p>
       </div>
     </main>
   )
