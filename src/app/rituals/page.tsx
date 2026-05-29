@@ -34,7 +34,7 @@ export default function RitualsPage() {
     if (!response.trim()) return
     setLoading(true)
 
-    // Route ritual response into main chat for Pascal to reflect on
+    // Route ritual response into main chat for Pascale to reflect on
     router.push(`/chat?ritual=${encodeURIComponent(ritualPrompt)}&response=${encodeURIComponent(response)}`)
   }
 
@@ -42,7 +42,7 @@ export default function RitualsPage() {
     <div className="min-h-screen" style={{ background: 'var(--background)' }}>
       <header className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
         <Link href="/chat" className="text-lg font-normal tracking-tight" style={{ color: 'var(--foreground)' }}>
-          Pascal
+          Pascale
         </Link>
         <nav className="flex gap-6">
           <Link href="/chat" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>
@@ -73,7 +73,7 @@ export default function RitualsPage() {
               <textarea
                 value={response}
                 onChange={e => setResponse(e.target.value)}
-                placeholder="Write freely. Pascal will hold this."
+                placeholder="Write freely. Pascale will hold this."
                 rows={6}
                 className="sans w-full px-4 py-3 text-sm outline-none resize-none mb-6"
                 style={{
@@ -97,7 +97,7 @@ export default function RitualsPage() {
                     cursor: loading || !response.trim() ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  {loading ? 'Reflecting...' : 'Bring to Pascal'}
+                  {loading ? 'Reflecting...' : 'Bring to Pascale'}
                 </button>
 
                 <Link
@@ -112,7 +112,7 @@ export default function RitualsPage() {
           ) : (
             <div className="fade-in">
               <p className="prose-pascal" style={{ color: 'var(--muted-foreground)' }}>
-                Pascal has received this.
+                Pascale has received this.
               </p>
             </div>
           )}

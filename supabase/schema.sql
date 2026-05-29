@@ -1,4 +1,4 @@
--- Pascal database schema
+-- Pascale database schema
 -- Run this in your Supabase SQL editor
 
 -- Enable pgvector extension for embeddings (optional, for v2)
@@ -88,13 +88,13 @@ create policy "Users can read own rituals" on public.rituals for select using (a
 create policy "Users can insert own rituals" on public.rituals for insert with check (auth.uid() = user_id);
 
 -- Mentor selection on users
-alter table public.users add column if not exists mentor_id text default 'pascal';
+alter table public.users add column if not exists mentor_id text default 'pascale';
 
 -- Homework/assignments table
 create table if not exists public.homework (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references public.users(id) on delete cascade not null,
-  mentor_id text not null default 'pascal',
+  mentor_id text not null default 'pascale',
   title text not null,
   type text not null check (type in ('reflection', 'practice', 'reading', 'quiz')),
   task text not null,

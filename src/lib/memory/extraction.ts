@@ -15,7 +15,7 @@ export async function extractMemoriesFromConversation(
   existingContext: string
 ): Promise<ExtractedMemories> {
   const conversationText = messages
-    .map(m => `${m.role === 'user' ? 'User' : 'Pascal'}: ${m.content}`)
+    .map(m => `${m.role === 'user' ? 'User' : 'Pascale'}: ${m.content}`)
     .join('\n')
 
   const response = await getOpenAI().chat.completions.create({
@@ -23,7 +23,7 @@ export async function extractMemoriesFromConversation(
     messages: [
       {
         role: 'system',
-        content: `You are a memory extraction system for Pascal, an AI companion focused on identity and personal growth.
+        content: `You are a memory extraction system for Pascale, an AI companion focused on identity and personal growth.
 
 Extract three types of memories from the conversation:
 
@@ -83,7 +83,7 @@ export async function synthesizeIdentity(
     messages: [
       {
         role: 'system',
-        content: `You are Pascal's identity synthesis engine. Based on accumulated memories, generate a rich portrait of who this person is becoming.
+        content: `You are Pascale's identity synthesis engine. Based on accumulated memories, generate a rich portrait of who this person is becoming.
 
 Respond ONLY with valid JSON:
 {

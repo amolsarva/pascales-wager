@@ -14,7 +14,7 @@ interface ChatMessage {
   homework?: ParsedHomework[]
 }
 
-const MENTOR_IDS: MentorId[] = ['socrates', 'aristotle', 'epictetus', 'pascal']
+const MENTOR_IDS: MentorId[] = ['socrates', 'aristotle', 'epictetus', 'pascale']
 
 const HOMEWORK_TYPE_LABELS: Record<string, string> = {
   reflection: 'Reflection',
@@ -86,7 +86,7 @@ export default function ChatPage() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [conversationId] = useState(() => uuidv4())
-  const [currentMentor, setCurrentMentor] = useState<MentorId>('pascal')
+  const [currentMentor, setCurrentMentor] = useState<MentorId>('pascale')
   const [showMentorSwitch, setShowMentorSwitch] = useState(false)
   const [switchingMentor, setSwitchingMentor] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)

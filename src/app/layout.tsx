@@ -2,13 +2,13 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Pascal',
+  title: 'Pascale',
   description: 'An AI Paideia Companion — a persistent, reflective, ethically-shaped mentor.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Pascal',
+    title: 'Pascale',
   },
 }
 

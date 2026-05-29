@@ -35,14 +35,14 @@ export default function SignupPage() {
     <main className="flex min-h-screen flex-col items-center justify-center px-6">
       <div className="fade-in w-full max-w-sm">
         <Link href="/" className="sans text-xs tracking-[0.2em] uppercase block text-center mb-12" style={{ color: 'var(--accent)', opacity: 0.7 }}>
-          Pascal
+          Pascale
         </Link>
 
         <h2 className="text-2xl font-normal text-center mb-3" style={{ color: 'var(--foreground)' }}>
           Begin
         </h2>
         <p className="sans text-sm text-center mb-8" style={{ color: 'var(--muted)' }}>
-          Pascal will remember who you are becoming.
+          Pascale will remember who you are becoming.
         </p>
 
         <form onSubmit={handleSignup} className="flex flex-col gap-4">

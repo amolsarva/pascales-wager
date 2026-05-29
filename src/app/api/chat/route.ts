@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    const mentorId: MentorId = (profile?.mentor_id as MentorId) || 'pascal'
+    const mentorId: MentorId = (profile?.mentor_id as MentorId) || 'pascale'
 
     const context = await getRelevantContext(user.id)
     const systemPrompt = buildSystemPrompt(context, mentorId, profile?.seed_identity)

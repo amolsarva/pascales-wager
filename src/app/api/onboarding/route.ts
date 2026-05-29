@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
         id: user.id,
         email: user.email,
         seed_identity: seedIdentity,
-        mentor_id: mentor_id || 'pascal',
+        mentor_id: mentor_id || 'pascale',
         onboarding_complete: true,
       })
 

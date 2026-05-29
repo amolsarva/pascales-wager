@@ -9,7 +9,7 @@ export default function LandingPage() {
         </p>
 
         <h1 className="text-6xl font-normal mb-6 tracking-tight" style={{ color: 'var(--foreground)', letterSpacing: '-0.02em' }}>
-          Pascal
+          Pascale
         </h1>
 
         <p className="text-lg mb-4" style={{ color: 'var(--muted-foreground)', lineHeight: 1.8 }}>

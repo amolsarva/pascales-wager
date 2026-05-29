@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MENTORS, type MentorId } from '@/lib/mentors/personas'
 
-const MENTOR_IDS: MentorId[] = ['socrates', 'aristotle', 'epictetus', 'pascal']
+const MENTOR_IDS: MentorId[] = ['socrates', 'aristotle', 'epictetus', 'pascale']
 
 const SEED_QUESTIONS = [
   {
@@ -36,7 +36,7 @@ const SEED_QUESTIONS = [
 
 export default function OnboardingPage() {
   const [phase, setPhase] = useState<'mentor' | 'questions'>('mentor')
-  const [selectedMentor, setSelectedMentor] = useState<MentorId>('pascal')
+  const [selectedMentor, setSelectedMentor] = useState<MentorId>('pascale')
   const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)

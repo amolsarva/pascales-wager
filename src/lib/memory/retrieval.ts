@@ -59,7 +59,7 @@ export async function getRelevantContext(userId: string) {
 
 export function buildSystemPrompt(
   context: Awaited<ReturnType<typeof getRelevantContext>>,
-  mentorId: MentorId = 'pascal',
+  mentorId: MentorId = 'pascale',
   seedIdentity?: Record<string, string>
 ): string {
   const { semanticMemories, narrativeMemories, episodicMemories, identitySummary, pendingHomework } = context

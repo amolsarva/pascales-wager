@@ -22,7 +22,7 @@ function HomeworkCard({
   const [expanded, setExpanded] = useState(false)
   const [response, setResponse] = useState(item.response || '')
   const [submitting, setSubmitting] = useState(false)
-  const mentor = MENTORS[(item.mentor_id as MentorId) || 'pascal']
+  const mentor = MENTORS[(item.mentor_id as MentorId) || 'pascale']
   const isCompleted = item.status === 'completed'
 
   const handleComplete = async () => {
@@ -180,7 +180,7 @@ export default function HomeworkPage() {
     <div className="min-h-screen" style={{ background: 'var(--background)' }}>
       <header className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
         <Link href="/chat" className="text-lg font-normal tracking-tight" style={{ color: 'var(--foreground)' }}>
-          Pascal
+          Pascale
         </Link>
         <nav className="flex gap-6">
           <Link href="/chat" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>
