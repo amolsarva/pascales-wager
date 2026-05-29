@@ -87,6 +87,32 @@ alter table public.rituals enable row level security;
 create policy "Users can read own rituals" on public.rituals for select using (auth.uid() = user_id);
 create policy "Users can insert own rituals" on public.rituals for insert with check (auth.uid() = user_id);
 
+-- Mentor selection on users
+alter table public.users add column if not exists mentor_id text default 'pascal';
+
+-- Homework/assignments table
+create table if not exists public.homework (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.users(id) on delete cascade not null,
+  mentor_id text not null default 'pascal',
+  title text not null,
+  type text not null check (type in ('reflection', 'practice', 'reading', 'quiz')),
+  task text not null,
+  status text not null default 'pending' check (status in ('pending', 'completed')),
+  response text,
+  created_at timestamptz default now(),
+  completed_at timestamptz
+);
+
+alter table public.homework enable row level security;
+create policy "Users can read own homework" on public.homework for select using (auth.uid() = user_id);
+create policy "Users can insert own homework" on public.homework for insert with check (auth.uid() = user_id);
+create policy "Users can update own homework" on public.homework for update using (auth.uid() = user_id);
+
+create index if not exists homework_user_id_idx on public.homework(user_id);
+create index if not exists homework_status_idx on public.homework(user_id, status);
+create index if not exists homework_created_at_idx on public.homework(created_at desc);
+
 -- Auto-create user record on signup
 create or replace function public.handle_new_user()
 returns trigger

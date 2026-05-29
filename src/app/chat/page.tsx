@@ -4,12 +4,81 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { v4 as uuidv4 } from 'uuid'
+import { MENTORS, type MentorId, type ParsedHomework } from '@/lib/mentors/personas'
 
 interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
   streaming?: boolean
+  homework?: ParsedHomework[]
+}
+
+const MENTOR_IDS: MentorId[] = ['socrates', 'aristotle', 'epictetus', 'pascal']
+
+const HOMEWORK_TYPE_LABELS: Record<string, string> = {
+  reflection: 'Reflection',
+  practice: 'Practice',
+  reading: 'Reading',
+  quiz: 'Quiz',
+}
+
+function HomeworkCard({ hw, onSaved }: { hw: ParsedHomework; onSaved?: () => void }) {
+  const [saved, setSaved] = useState(false)
+
+  const handleSave = async () => {
+    // Homework is already saved server-side; this just gives visual feedback
+    setSaved(true)
+    onSaved?.()
+  }
+
+  return (
+    <div
+      className="mt-4 px-4 py-4 fade-in"
+      style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--accent)',
+        borderLeft: '3px solid var(--accent)',
+        borderRadius: '2px',
+        opacity: 0.95,
+      }}
+    >
+      <div className="flex items-start justify-between mb-2">
+        <span
+          className="sans text-xs tracking-wide uppercase px-2 py-0.5"
+          style={{
+            background: 'var(--accent)',
+            color: 'var(--background)',
+            borderRadius: '2px',
+            fontSize: '10px',
+            letterSpacing: '0.08em',
+          }}
+        >
+          {HOMEWORK_TYPE_LABELS[hw.type] || hw.type}
+        </span>
+        {!saved && (
+          <button
+            onClick={handleSave}
+            className="sans text-xs"
+            style={{ color: 'var(--muted)', textDecoration: 'underline', cursor: 'pointer' }}
+          >
+            Got it
+          </button>
+        )}
+        {saved && (
+          <span className="sans text-xs" style={{ color: 'var(--accent)', opacity: 0.7 }}>
+            Saved to homework
+          </span>
+        )}
+      </div>
+      <p className="text-sm font-normal mb-2" style={{ color: 'var(--foreground)' }}>
+        {hw.title}
+      </p>
+      <p className="sans text-sm leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>
+        {hw.task}
+      </p>
+    </div>
+  )
 }
 
 export default function ChatPage() {
@@ -17,15 +86,68 @@ export default function ChatPage() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [conversationId] = useState(() => uuidv4())
+  const [currentMentor, setCurrentMentor] = useState<MentorId>('pascal')
+  const [showMentorSwitch, setShowMentorSwitch] = useState(false)
+  const [switchingMentor, setSwitchingMentor] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return
+      const { data } = await supabase
+        .from('users')
+        .select('mentor_id')
+        .eq('id', user.id)
+        .single()
+      if (data?.mentor_id) setCurrentMentor(data.mentor_id as MentorId)
+    })
+  }, [])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const sendMessage = useCallback(async () => {
-    const content = input.trim()
+  // Handle ritual query params
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const ritual = params.get('ritual')
+    const response = params.get('response')
+    if (ritual && response) {
+      const combinedContent = `Daily Examen reflection —\n\nPrompt: "${ritual}"\n\nMy response: ${response}`
+      // Clear params then auto-send
+      window.history.replaceState({}, '', '/chat')
+      setTimeout(() => {
+        setInput(combinedContent)
+      }, 100)
+    }
+  }, [])
+
+  const switchMentor = async (mentorId: MentorId) => {
+    setSwitchingMentor(true)
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      await supabase
+        .from('users')
+        .update({ mentor_id: mentorId })
+        .eq('id', user.id)
+    }
+    setCurrentMentor(mentorId)
+    setShowMentorSwitch(false)
+    setSwitchingMentor(false)
+    const switchMsg: ChatMessage = {
+      id: uuidv4(),
+      role: 'assistant',
+      content: `You are now speaking with ${MENTORS[mentorId].name}. ${MENTORS[mentorId].tagline}.`,
+    }
+    setMessages(prev => [...prev, switchMsg])
+  }
+
+  const sendMessage = useCallback(async (overrideContent?: string) => {
+    const content = overrideContent ?? input.trim()
     if (!content || loading) return
 
     const userMsg: ChatMessage = { id: uuidv4(), role: 'user', content }
@@ -49,7 +171,8 @@ export default function ChatPage() {
 
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
-      let fullContent = ''
+      let finalContent = ''
+      let finalHomework: ParsedHomework[] = []
 
       while (true) {
         const { done, value } = await reader.read()
@@ -64,17 +187,24 @@ export default function ChatPage() {
             if (data === '[DONE]') break
             try {
               const parsed = JSON.parse(data)
-              fullContent += parsed.content || ''
-              setMessages(prev => prev.map(m =>
-                m.id === assistantMsg.id ? { ...m, content: fullContent } : m
-              ))
+              if (parsed.content) {
+                finalContent = parsed.content
+                setMessages(prev => prev.map(m =>
+                  m.id === assistantMsg.id ? { ...m, content: parsed.content } : m
+                ))
+              }
+              if (parsed.homework) {
+                finalHomework = parsed.homework
+              }
             } catch {}
           }
         }
       }
 
       setMessages(prev => prev.map(m =>
-        m.id === assistantMsg.id ? { ...m, streaming: false } : m
+        m.id === assistantMsg.id
+          ? { ...m, content: finalContent, streaming: false, homework: finalHomework.length > 0 ? finalHomework : undefined }
+          : m
       ))
     } catch (error) {
       console.error('Chat error:', error)
@@ -83,6 +213,14 @@ export default function ChatPage() {
     }
   }, [input, loading, messages, conversationId])
 
+  // Auto-send when input is set via ritual params
+  useEffect(() => {
+    if (input && !loading && messages.length === 0) {
+      const timer = setTimeout(() => sendMessage(input), 300)
+      return () => clearTimeout(timer)
+    }
+  }, [input])
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -90,15 +228,71 @@ export default function ChatPage() {
     }
   }
 
+  const mentor = MENTORS[currentMentor]
+
   return (
     <div className="flex flex-col h-screen" style={{ background: 'var(--background)' }}>
 
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-        <Link href="/chat" className="text-lg font-normal tracking-tight" style={{ color: 'var(--foreground)' }}>
-          Pascal
-        </Link>
+        <div className="relative">
+          <button
+            onClick={() => setShowMentorSwitch(v => !v)}
+            className="flex items-center gap-2 transition-opacity hover:opacity-80"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          >
+            <span className="text-lg font-normal tracking-tight" style={{ color: 'var(--foreground)' }}>
+              {mentor.name}
+            </span>
+            <span className="sans text-xs" style={{ color: 'var(--muted)' }}>
+              ↕
+            </span>
+          </button>
+
+          {showMentorSwitch && (
+            <div
+              className="absolute top-full left-0 mt-2 z-50 w-64"
+              style={{
+                background: 'var(--surface-raised)',
+                border: '1px solid var(--border)',
+                borderRadius: '2px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              }}
+            >
+              {MENTOR_IDS.map(id => {
+                const m = MENTORS[id]
+                return (
+                  <button
+                    key={id}
+                    onClick={() => switchMentor(id)}
+                    disabled={switchingMentor}
+                    className="w-full text-left px-4 py-3 transition-all"
+                    style={{
+                      background: id === currentMentor ? 'var(--surface)' : 'transparent',
+                      borderBottom: '1px solid var(--border)',
+                      cursor: switchingMentor ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="sans text-sm" style={{ color: 'var(--foreground)' }}>{m.name}</span>
+                      {id === currentMentor && (
+                        <span className="sans text-xs" style={{ color: 'var(--accent)' }}>active</span>
+                      )}
+                    </div>
+                    <p className="sans text-xs mt-0.5" style={{ color: 'var(--muted)', lineHeight: 1.4 }}>
+                      {m.tagline}
+                    </p>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
         <nav className="flex gap-6">
+          <Link href="/homework" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>
+            Homework
+          </Link>
           <Link href="/mirror" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>
             Mirror
           </Link>
@@ -108,16 +302,27 @@ export default function ChatPage() {
         </nav>
       </header>
 
+      {/* Click outside to close mentor switcher */}
+      {showMentorSwitch && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setShowMentorSwitch(false)}
+        />
+      )}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-6">
         <div className="max-w-2xl mx-auto">
           {messages.length === 0 && (
             <div className="fade-in text-center mt-16">
+              <p className="text-xs uppercase tracking-widest mb-4 sans" style={{ color: 'var(--accent)', opacity: 0.5 }}>
+                {mentor.era}
+              </p>
               <p className="text-base mb-3" style={{ color: 'var(--muted-foreground)' }}>
-                Begin wherever you are.
+                {mentor.tagline}
               </p>
               <p className="sans text-xs" style={{ color: 'var(--muted)', opacity: 0.5 }}>
-                Pascal is listening.
+                {mentor.approach}
               </p>
             </div>
           )}
@@ -142,16 +347,21 @@ export default function ChatPage() {
                   </p>
                 </div>
               ) : (
-                <div className="prose-pascal" style={{ color: 'var(--foreground)' }}>
-                  {msg.content ? (
-                    <p className={msg.streaming && !msg.content.endsWith(' ') ? 'cursor-blink' : ''}>
-                      {msg.content}
-                    </p>
-                  ) : (
-                    <p className="sans text-sm" style={{ color: 'var(--muted)' }}>
-                      <span className="cursor-blink" />
-                    </p>
-                  )}
+                <div>
+                  <div className="prose-pascal" style={{ color: 'var(--foreground)' }}>
+                    {msg.content ? (
+                      <p className={msg.streaming ? 'cursor-blink' : ''} style={{ whiteSpace: 'pre-wrap' }}>
+                        {msg.content}
+                      </p>
+                    ) : (
+                      <p className="sans text-sm" style={{ color: 'var(--muted)' }}>
+                        <span className="cursor-blink" />
+                      </p>
+                    )}
+                  </div>
+                  {!msg.streaming && msg.homework?.map((hw, i) => (
+                    <HomeworkCard key={i} hw={hw} />
+                  ))}
                 </div>
               )}
             </div>
@@ -186,7 +396,7 @@ export default function ChatPage() {
               }}
             />
             <button
-              onClick={sendMessage}
+              onClick={() => sendMessage()}
               disabled={loading || !input.trim()}
               className="sans text-xs tracking-wide px-3 py-1.5 transition-all duration-200 flex-shrink-0"
               style={{

@@ -1,6 +1,8 @@
 import OpenAI from 'openai'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+}
 
 export interface ExtractedMemories {
   episodic: Array<{ content: string; confidence: number }>
@@ -16,7 +18,7 @@ export async function extractMemoriesFromConversation(
     .map(m => `${m.role === 'user' ? 'User' : 'Pascal'}: ${m.content}`)
     .join('\n')
 
-  const response = await openai.chat.completions.create({
+  const response = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [
       {
@@ -76,7 +78,7 @@ export async function synthesizeIdentity(
     ? `Initial self-portrait:\n- Becoming: ${seedIdentity.becoming}\n- Misunderstood: ${seedIdentity.misunderstood}\n- Fears: ${seedIdentity.fear}\n- Admires: ${seedIdentity.admire}`
     : ''
 
-  const response = await openai.chat.completions.create({
+  const response = await getOpenAI().chat.completions.create({
     model: 'gpt-4o',
     messages: [
       {

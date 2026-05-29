@@ -10,7 +10,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const seedIdentity = await request.json()
+    const body = await request.json()
+    const { mentor_id, ...seedIdentity } = body
 
     const { error } = await supabase
       .from('users')
@@ -18,6 +19,7 @@ export async function POST(request: NextRequest) {
         id: user.id,
         email: user.email,
         seed_identity: seedIdentity,
+        mentor_id: mentor_id || 'pascal',
         onboarding_complete: true,
       })
 
