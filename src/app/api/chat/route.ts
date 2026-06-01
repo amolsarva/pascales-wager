@@ -3,10 +3,13 @@ import OpenAI from 'openai'
 import { createClient } from '@/lib/supabase/server'
 import { getRelevantContext, buildSystemPrompt } from '@/lib/memory/retrieval'
 import { extractMemoriesFromConversation } from '@/lib/memory/extraction'
-import { parseHomeworkBlocks, type MentorId } from '@/lib/mentors/personas'
+import { advisors } from '@/lib/council-data'
+
+let openai: OpenAI | undefined
 
 function getOpenAI() {
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  openai ??= new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  return openai
 }
 
 export async function POST(request: NextRequest) {
@@ -18,19 +21,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { messages, conversationId } = await request.json()
+    const { messages, conversationId, advisorId } = await request.json()
+    const advisor = advisors.find((item) => item.id === advisorId) ?? advisors[0]
 
+    // Get user profile for seed identity
     const { data: profile } = await supabase
       .from('users')
-      .select('seed_identity, mentor_id')
+      .select('seed_identity')
       .eq('id', user.id)
       .single()
 
-    const mentorId: MentorId = (profile?.mentor_id as MentorId) || 'pascale'
+    // Retrieve relevant memory context
+    const context = await getRelevantContext(user.id, messages[messages.length - 1]?.content || '')
+    const systemPrompt = buildSystemPrompt(context, profile?.seed_identity, advisor)
 
-    const context = await getRelevantContext(user.id)
-    const systemPrompt = buildSystemPrompt(context, mentorId, profile?.seed_identity)
-
+    // Save user message
     const userMessage = messages[messages.length - 1]
     await supabase.from('messages').insert({
       user_id: user.id,
@@ -39,59 +44,41 @@ export async function POST(request: NextRequest) {
       conversation_id: conversationId,
     })
 
-    // Collect full response before streaming so we can parse homework blocks
-    const completion = await getOpenAI().chat.completions.create({
+    // Stream response from OpenAI
+    const stream = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt },
-        ...messages.slice(-20),
+        ...messages.slice(-20), // Keep last 20 messages for context window
       ],
+      stream: true,
       temperature: 0.8,
-      max_tokens: 900,
+      max_tokens: 800,
     })
 
-    const fullResponse = completion.choices[0]?.message?.content || ''
-    const { cleanText, homework } = parseHomeworkBlocks(fullResponse)
+    let fullResponse = ''
 
-    // Save assistant message (clean, without [HOMEWORK] tags)
-    await supabase.from('messages').insert({
-      user_id: user.id,
-      role: 'assistant',
-      content: cleanText,
-      conversation_id: conversationId,
-    })
-
-    // Save any homework assignments
-    if (homework.length > 0) {
-      await supabase.from('homework').insert(
-        homework.map(hw => ({
-          user_id: user.id,
-          mentor_id: mentorId,
-          title: hw.title,
-          type: hw.type,
-          task: hw.task,
-        }))
-      )
-    }
-
-    // Trigger async memory extraction
-    extractAndStoreMemories(user.id, messages, cleanText, context).catch(console.error)
-
-    // Stream the clean text back to the client, then send any homework data
     const encoder = new TextEncoder()
     const readable = new ReadableStream({
-      start(controller) {
-        // Send content in one chunk (already buffered for homework parsing)
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ content: cleanText })}\n\n`)
-        )
-
-        // Send homework metadata for client-side rendering
-        if (homework.length > 0) {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ homework })}\n\n`)
-          )
+      async start(controller) {
+        for await (const chunk of stream) {
+          const delta = chunk.choices[0]?.delta?.content || ''
+          if (delta) {
+            fullResponse += delta
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: delta })}\n\n`))
+          }
         }
+
+        // Save assistant message
+        await supabase.from('messages').insert({
+          user_id: user.id,
+          role: 'assistant',
+          content: fullResponse,
+          conversation_id: conversationId,
+        })
+
+        // Trigger async memory extraction (fire and forget)
+        extractAndStoreMemories(user.id, messages, fullResponse, context).catch(console.error)
 
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()

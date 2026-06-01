@@ -1,0 +1,28 @@
+import type { MetadataRoute } from 'next'
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: 'The Council: Personal AI Advisors',
+    short_name: 'The Council',
+    description: 'A private council of AI advisors for decisions, reflection, and a more coherent life.',
+    start_url: '/home',
+    display: 'standalone',
+    background_color: '#11110f',
+    theme_color: '#11110f',
+    orientation: 'portrait',
+    icons: [
+      {
+        src: '/icon-192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+      {
+        src: '/icon-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+    ],
+  }
+}

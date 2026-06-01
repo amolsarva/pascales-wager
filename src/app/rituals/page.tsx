@@ -25,7 +25,6 @@ function getTodayRitual(): string {
 
 export default function RitualsPage() {
   const [response, setResponse] = useState('')
-  const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const ritualPrompt = getTodayRitual()
@@ -34,15 +33,15 @@ export default function RitualsPage() {
     if (!response.trim()) return
     setLoading(true)
 
-    // Route ritual response into main chat for Pascale to reflect on
+    // Route ritual response into the main chat for the advisor to reflect on.
     router.push(`/chat?ritual=${encodeURIComponent(ritualPrompt)}&response=${encodeURIComponent(response)}`)
   }
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--background)' }}>
       <header className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-        <Link href="/chat" className="text-lg font-normal tracking-tight" style={{ color: 'var(--foreground)' }}>
-          Pascale
+        <Link href="/home" className="text-lg font-normal tracking-tight" style={{ color: 'var(--foreground)' }}>
+          The Council
         </Link>
         <nav className="flex gap-6">
           <Link href="/chat" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>
@@ -68,57 +67,48 @@ export default function RitualsPage() {
             {ritualPrompt}
           </h2>
 
-          {!submitted ? (
-            <>
-              <textarea
-                value={response}
-                onChange={e => setResponse(e.target.value)}
-                placeholder="Write freely. Pascale will hold this."
-                rows={6}
-                className="sans w-full px-4 py-3 text-sm outline-none resize-none mb-6"
+          <>
+            <textarea
+              value={response}
+              onChange={e => setResponse(e.target.value)}
+              placeholder="Write freely. Your council will hold this."
+              rows={6}
+              className="sans w-full px-4 py-3 text-sm outline-none resize-none mb-6"
+              style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                color: 'var(--foreground)',
+                borderRadius: '2px',
+                lineHeight: 1.75,
+              }}
+            />
+
+            <div className="flex gap-4">
+              <button
+                onClick={handleSubmit}
+                disabled={loading || !response.trim()}
+                className="sans px-6 py-2.5 text-sm tracking-wide transition-all"
                 style={{
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--foreground)',
+                  background: loading || !response.trim() ? 'var(--accent-dim)' : 'var(--accent)',
+                  color: 'var(--background)',
                   borderRadius: '2px',
-                  lineHeight: 1.75,
+                  cursor: loading || !response.trim() ? 'not-allowed' : 'pointer',
                 }}
-              />
+              >
+                {loading ? 'Reflecting...' : 'Bring to the Council'}
+              </button>
 
-              <div className="flex gap-4">
-                <button
-                  onClick={handleSubmit}
-                  disabled={loading || !response.trim()}
-                  className="sans px-6 py-2.5 text-sm tracking-wide transition-all"
-                  style={{
-                    background: loading || !response.trim() ? 'var(--accent-dim)' : 'var(--accent)',
-                    color: 'var(--background)',
-                    borderRadius: '2px',
-                    cursor: loading || !response.trim() ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {loading ? 'Reflecting...' : 'Bring to Pascale'}
-                </button>
-
-                <Link
-                  href="/chat"
-                  className="sans px-4 py-2.5 text-sm"
-                  style={{ color: 'var(--muted)' }}
-                >
-                  Skip today
-                </Link>
-              </div>
-            </>
-          ) : (
-            <div className="fade-in">
-              <p className="prose-pascal" style={{ color: 'var(--muted-foreground)' }}>
-                Pascale has received this.
-              </p>
+              <Link
+                href="/chat"
+                className="sans px-4 py-2.5 text-sm"
+                style={{ color: 'var(--muted)' }}
+              >
+                Skip today
+              </Link>
             </div>
-          )}
+          </>
         </div>
 
-        {/* All ritual prompts */}
         <div className="mt-16 pt-8" style={{ borderTop: '1px solid var(--border)' }}>
           <p className="sans text-xs tracking-[0.2em] uppercase mb-6" style={{ color: 'var(--muted)', opacity: 0.5 }}>
             The Examen

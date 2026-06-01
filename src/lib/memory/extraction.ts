@@ -1,7 +1,10 @@
 import OpenAI from 'openai'
 
+let openai: OpenAI | undefined
+
 function getOpenAI() {
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  openai ??= new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  return openai
 }
 
 export interface ExtractedMemories {
@@ -15,7 +18,7 @@ export async function extractMemoriesFromConversation(
   existingContext: string
 ): Promise<ExtractedMemories> {
   const conversationText = messages
-    .map(m => `${m.role === 'user' ? 'User' : 'Pascale'}: ${m.content}`)
+    .map(m => `${m.role === 'user' ? 'User' : 'Advisor'}: ${m.content}`)
     .join('\n')
 
   const response = await getOpenAI().chat.completions.create({
@@ -23,7 +26,7 @@ export async function extractMemoriesFromConversation(
     messages: [
       {
         role: 'system',
-        content: `You are a memory extraction system for Pascale, an AI companion focused on identity and personal growth.
+        content: `You are a memory extraction system for The Council, a private reflection app focused on identity and personal growth.
 
 Extract three types of memories from the conversation:
 
@@ -83,7 +86,7 @@ export async function synthesizeIdentity(
     messages: [
       {
         role: 'system',
-        content: `You are Pascale's identity synthesis engine. Based on accumulated memories, generate a rich portrait of who this person is becoming.
+        content: `You are The Council's identity synthesis engine. Based on accumulated memories, generate a rich portrait of who this person is becoming.
 
 Respond ONLY with valid JSON:
 {
