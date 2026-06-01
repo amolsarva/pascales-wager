@@ -35,15 +35,18 @@ export default function MirrorPage() {
   return (
     <div className="min-h-screen" style={{ background: 'var(--background)' }}>
       <header className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-        <Link href="/chat" className="text-lg font-normal tracking-tight" style={{ color: 'var(--foreground)' }}>
-          Pascale
+        <Link href="/home" className="text-lg font-normal tracking-tight" style={{ color: 'var(--foreground)' }}>
+          The Council
         </Link>
-        <nav className="flex gap-6">
+        <nav className="flex gap-5">
           <Link href="/chat" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>
-            Conversation
+            Chat
           </Link>
           <Link href="/rituals" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>
             Rituals
+          </Link>
+          <Link href="/timeline" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>
+            Timeline
           </Link>
         </nav>
       </header>
@@ -51,7 +54,7 @@ export default function MirrorPage() {
       <main className="max-w-2xl mx-auto px-6 py-12">
         <div className="mb-12">
           <p className="sans text-xs tracking-[0.3em] uppercase mb-3" style={{ color: 'var(--accent)', opacity: 0.6 }}>
-            What Pascale Thinks
+            What your council sees
           </p>
           <h1 className="text-3xl font-normal" style={{ color: 'var(--foreground)' }}>
             The Mirror
@@ -162,7 +165,7 @@ export default function MirrorPage() {
             ) : (
               <div className="fade-in">
                 <p className="prose-pascal mb-6" style={{ color: 'var(--muted-foreground)' }}>
-                  Pascale hasn&apos;t yet formed a full picture of you. Keep talking. The mirror fills slowly.
+                  Your council hasn&apos;t yet formed a full picture of you. Keep talking. The mirror fills slowly.
                 </p>
                 {memories.length >= 5 && (
                   <button
@@ -186,7 +189,7 @@ export default function MirrorPage() {
             {memories.length > 0 && (
               <div className="mt-16 pt-8" style={{ borderTop: '1px solid var(--border)' }}>
                 <p className="sans text-xs tracking-[0.2em] uppercase mb-4" style={{ color: 'var(--muted)', opacity: 0.5 }}>
-                  What Pascale carries
+                  What your council carries
                 </p>
                 <div className="flex gap-8">
                   <div>

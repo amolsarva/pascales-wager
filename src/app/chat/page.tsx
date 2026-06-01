@@ -1,159 +1,119 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import {
+  ArrowLeft,
+  Bookmark,
+  BookmarkCheck,
+  ChevronDown,
+  Feather,
+  Menu,
+  MoreHorizontal,
+  Send,
+  Sparkles,
+  X,
+} from 'lucide-react'
 import { v4 as uuidv4 } from 'uuid'
-import { MENTORS, type MentorId, type ParsedHomework } from '@/lib/mentors/personas'
+import { AdvisorAvatar } from '@/components/advisor-avatar'
+import { CouncilLogo } from '@/components/council-logo'
+import { createClient } from '@/lib/supabase/client'
+import { advisors } from '@/lib/council-data'
 
-interface ChatMessage {
+type ChatMessage = {
   id: string
   role: 'user' | 'assistant'
   content: string
+  remembered?: boolean
   streaming?: boolean
-  homework?: ParsedHomework[]
 }
 
-const MENTOR_IDS: MentorId[] = ['socrates', 'aristotle', 'epictetus', 'pascale']
-
-const HOMEWORK_TYPE_LABELS: Record<string, string> = {
-  reflection: 'Reflection',
-  practice: 'Practice',
-  reading: 'Reading',
-  quiz: 'Quiz',
+type Conversation = {
+  id: string
+  preview: string
+  created_at: string
 }
 
-function HomeworkCard({ hw, onSaved }: { hw: ParsedHomework; onSaved?: () => void }) {
-  const [saved, setSaved] = useState(false)
+const QUICK_ACTIONS = ['Clarify', 'Challenge me', 'Be practical', 'Go deeper']
 
-  const handleSave = async () => {
-    // Homework is already saved server-side; this just gives visual feedback
-    setSaved(true)
-    onSaved?.()
-  }
-
-  return (
-    <div
-      className="mt-4 px-4 py-4 fade-in"
-      style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--accent)',
-        borderLeft: '3px solid var(--accent)',
-        borderRadius: '2px',
-        opacity: 0.95,
-      }}
-    >
-      <div className="flex items-start justify-between mb-2">
-        <span
-          className="sans text-xs tracking-wide uppercase px-2 py-0.5"
-          style={{
-            background: 'var(--accent)',
-            color: 'var(--background)',
-            borderRadius: '2px',
-            fontSize: '10px',
-            letterSpacing: '0.08em',
-          }}
-        >
-          {HOMEWORK_TYPE_LABELS[hw.type] || hw.type}
-        </span>
-        {!saved && (
-          <button
-            onClick={handleSave}
-            className="sans text-xs"
-            style={{ color: 'var(--muted)', textDecoration: 'underline', cursor: 'pointer' }}
-          >
-            Got it
-          </button>
-        )}
-        {saved && (
-          <span className="sans text-xs" style={{ color: 'var(--accent)', opacity: 0.7 }}>
-            Saved to homework
-          </span>
-        )}
-      </div>
-      <p className="text-sm font-normal mb-2" style={{ color: 'var(--foreground)' }}>
-        {hw.title}
-      </p>
-      <p className="sans text-sm leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>
-        {hw.task}
-      </p>
-    </div>
-  )
-}
-
-export default function ChatPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [conversationId] = useState(() => uuidv4())
-  const [currentMentor, setCurrentMentor] = useState<MentorId>('pascale')
-  const [showMentorSwitch, setShowMentorSwitch] = useState(false)
-  const [switchingMentor, setSwitchingMentor] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
+function ChatPageInner() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const [input, setInput] = useState(() => {
+    const ritual = searchParams.get('ritual')
+    const response = searchParams.get('response')
+    return ritual && response ? `[Daily reflection: ${ritual}]\n\n${response}` : ''
+  })
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [loading, setLoading] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [conversationId] = useState(() => uuidv4())
+
+  const advisor = useMemo(() => {
+    const requested = searchParams.get('advisor')
+    return advisors.find((item) => item.id === requested) ?? advisors[0]
+  }, [searchParams])
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return
+    const init = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push('/auth/login')
+        return
+      }
+
       const { data } = await supabase
-        .from('users')
-        .select('mentor_id')
-        .eq('id', user.id)
-        .single()
-      if (data?.mentor_id) setCurrentMentor(data.mentor_id as MentorId)
-    })
-  }, [])
+        .from('messages')
+        .select('conversation_id, content, created_at')
+        .eq('user_id', user.id)
+        .eq('role', 'user')
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      if (!data) return
+      const seen = new Set<string>()
+      const recent: Conversation[] = []
+      for (const message of data) {
+        if (message.conversation_id && !seen.has(message.conversation_id)) {
+          seen.add(message.conversation_id)
+          recent.push({
+            id: message.conversation_id,
+            preview: message.content.slice(0, 62) + (message.content.length > 62 ? '...' : ''),
+            created_at: message.created_at,
+          })
+        }
+      }
+      setConversations(recent.slice(0, 10))
+    }
+
+    init()
+  }, [router])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Handle ritual query params
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    const params = new URLSearchParams(window.location.search)
-    const ritual = params.get('ritual')
-    const response = params.get('response')
-    if (ritual && response) {
-      const combinedContent = `Daily Examen reflection —\n\nPrompt: "${ritual}"\n\nMy response: ${response}`
-      // Clear params then auto-send
-      window.history.replaceState({}, '', '/chat')
-      setTimeout(() => {
-        setInput(combinedContent)
-      }, 100)
-    }
-  }, [])
+    const textarea = textareaRef.current
+    if (!textarea) return
+    textarea.style.height = 'auto'
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 150)}px`
+  }, [input])
 
-  const switchMentor = async (mentorId: MentorId) => {
-    setSwitchingMentor(true)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      await supabase
-        .from('users')
-        .update({ mentor_id: mentorId })
-        .eq('id', user.id)
-    }
-    setCurrentMentor(mentorId)
-    setShowMentorSwitch(false)
-    setSwitchingMentor(false)
-    const switchMsg: ChatMessage = {
-      id: uuidv4(),
-      role: 'assistant',
-      content: `You are now speaking with ${MENTORS[mentorId].name}. ${MENTORS[mentorId].tagline}.`,
-    }
-    setMessages(prev => [...prev, switchMsg])
-  }
-
-  const sendMessage = useCallback(async (overrideContent?: string) => {
-    const content = overrideContent ?? input.trim()
+  const sendMessage = useCallback(async () => {
+    const content = input.trim()
     if (!content || loading) return
 
-    const userMsg: ChatMessage = { id: uuidv4(), role: 'user', content }
-    const assistantMsg: ChatMessage = { id: uuidv4(), role: 'assistant', content: '', streaming: true }
+    const userMessage: ChatMessage = { id: uuidv4(), role: 'user', content }
+    const assistantMessage: ChatMessage = { id: uuidv4(), role: 'assistant', content: '', streaming: true }
+    const nextMessages = [...messages, userMessage]
 
-    setMessages(prev => [...prev, userMsg, assistantMsg])
+    setMessages([...nextMessages, assistantMessage])
     setInput('')
     setLoading(true)
 
@@ -162,259 +122,272 @@ export default function ChatPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })),
+          messages: nextMessages.map(({ role, content: messageContent }) => ({ role, content: messageContent })),
           conversationId,
+          advisorId: advisor.id,
         }),
       })
 
-      if (!response.body) throw new Error('No stream')
+      if (!response.ok || !response.body) throw new Error('Unable to start stream')
 
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
-      let finalContent = ''
-      let finalHomework: ParsedHomework[] = []
+      let streamed = ''
+      let pending = ''
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
+        pending += decoder.decode(value, { stream: true })
+        const events = pending.split('\n\n')
+        pending = events.pop() ?? ''
 
-        const chunk = decoder.decode(value, { stream: true })
-        const lines = chunk.split('\n').filter(Boolean)
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6)
-            if (data === '[DONE]') break
-            try {
-              const parsed = JSON.parse(data)
-              if (parsed.content) {
-                finalContent = parsed.content
-                setMessages(prev => prev.map(m =>
-                  m.id === assistantMsg.id ? { ...m, content: parsed.content } : m
-                ))
-              }
-              if (parsed.homework) {
-                finalHomework = parsed.homework
-              }
-            } catch {}
+        for (const event of events) {
+          const data = event.replace(/^data:\s*/, '')
+          if (!data || data === '[DONE]') continue
+          try {
+            streamed += JSON.parse(data).content ?? ''
+            setMessages((current) =>
+              current.map((message) =>
+                message.id === assistantMessage.id ? { ...message, content: streamed } : message
+              )
+            )
+          } catch {
+            // Ignore malformed partial events. The next complete SSE event continues the stream.
           }
         }
       }
 
-      setMessages(prev => prev.map(m =>
-        m.id === assistantMsg.id
-          ? { ...m, content: finalContent, streaming: false, homework: finalHomework.length > 0 ? finalHomework : undefined }
-          : m
-      ))
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === assistantMessage.id ? { ...message, streaming: false } : message
+        )
+      )
     } catch (error) {
       console.error('Chat error:', error)
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === assistantMessage.id
+            ? {
+                ...message,
+                content: 'The room is quiet for a moment. Please try again.',
+                streaming: false,
+              }
+            : message
+        )
+      )
     } finally {
       setLoading(false)
     }
-  }, [input, loading, messages, conversationId])
+  }, [advisor.id, conversationId, input, loading, messages])
 
-  // Auto-send when input is set via ritual params
-  useEffect(() => {
-    if (input && !loading && messages.length === 0) {
-      const timer = setTimeout(() => sendMessage(input), 300)
-      return () => clearTimeout(timer)
-    }
-  }, [input])
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
-    }
+  const applyQuickAction = (action: string) => {
+    setInput((current) => current || `${action}: `)
+    textareaRef.current?.focus()
   }
 
-  const mentor = MENTORS[currentMentor]
+  const toggleRemembered = (id: string) => {
+    setMessages((current) =>
+      current.map((message) => message.id === id ? { ...message, remembered: !message.remembered } : message)
+    )
+  }
 
   return (
-    <div className="flex flex-col h-screen" style={{ background: 'var(--background)' }}>
-
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-        <div className="relative">
-          <button
-            onClick={() => setShowMentorSwitch(v => !v)}
-            className="flex items-center gap-2 transition-opacity hover:opacity-80"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-          >
-            <span className="text-lg font-normal tracking-tight" style={{ color: 'var(--foreground)' }}>
-              {mentor.name}
-            </span>
-            <span className="sans text-xs" style={{ color: 'var(--muted)' }}>
-              ↕
-            </span>
+    <main className="flex h-screen min-h-[620px] overflow-hidden bg-[#0e0e0d] text-ivory">
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-[284px] flex-col border-r border-white/[0.07] bg-[#121210] p-4 transition-transform lg:static lg:translate-x-0 ${
+          historyOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex items-center justify-between px-1 py-2">
+          <CouncilLogo href="/home" compact />
+          <button onClick={() => setHistoryOpen(false)} className="text-mist lg:hidden" aria-label="Close history">
+            <X size={18} />
           </button>
-
-          {showMentorSwitch && (
-            <div
-              className="absolute top-full left-0 mt-2 z-50 w-64"
-              style={{
-                background: 'var(--surface-raised)',
-                border: '1px solid var(--border)',
-                borderRadius: '2px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-              }}
-            >
-              {MENTOR_IDS.map(id => {
-                const m = MENTORS[id]
-                return (
-                  <button
-                    key={id}
-                    onClick={() => switchMentor(id)}
-                    disabled={switchingMentor}
-                    className="w-full text-left px-4 py-3 transition-all"
-                    style={{
-                      background: id === currentMentor ? 'var(--surface)' : 'transparent',
-                      borderBottom: '1px solid var(--border)',
-                      cursor: switchingMentor ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="sans text-sm" style={{ color: 'var(--foreground)' }}>{m.name}</span>
-                      {id === currentMentor && (
-                        <span className="sans text-xs" style={{ color: 'var(--accent)' }}>active</span>
-                      )}
-                    </div>
-                    <p className="sans text-xs mt-0.5" style={{ color: 'var(--muted)', lineHeight: 1.4 }}>
-                      {m.tagline}
-                    </p>
-                  </button>
-                )
-              })}
-            </div>
-          )}
         </div>
 
-        <nav className="flex gap-6">
-          <Link href="/homework" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>
-            Homework
-          </Link>
-          <Link href="/mirror" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>
-            Mirror
-          </Link>
-          <Link href="/rituals" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>
-            Rituals
-          </Link>
-        </nav>
-      </header>
+        <Link href="/home" className="mt-6 flex items-center gap-2 rounded-xl px-2 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-mist transition hover:bg-white/[0.03] hover:text-ivory">
+          <ArrowLeft size={14} /> Leave the room
+        </Link>
 
-      {/* Click outside to close mentor switcher */}
-      {showMentorSwitch && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setShowMentorSwitch(false)}
+        <div className="mt-5 border-t border-white/[0.07] pt-5">
+          <p className="px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-gold">Recent sessions</p>
+          <div className="mt-3 space-y-1">
+            {conversations.length > 0 ? conversations.map((conversation) => (
+              <button key={conversation.id} className="w-full rounded-lg px-2 py-2.5 text-left transition hover:bg-white/[0.035]">
+                <p className="line-clamp-2 text-xs leading-5 text-parchment/80">{conversation.preview}</p>
+                <p className="mt-1 text-[10px] uppercase tracking-[0.1em] text-mist/50">
+                  {new Date(conversation.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </p>
+              </button>
+            )) : (
+              <p className="px-2 py-2 text-xs leading-5 text-mist/60">This is a new thread. Your recent sessions will gather here.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-auto rounded-2xl border border-gold/15 bg-gold/[0.045] p-4">
+          <div className="flex items-center gap-2 text-gold">
+            <Feather size={14} strokeWidth={1.5} />
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em]">Remembered with care</p>
+          </div>
+          <p className="mt-2 text-xs leading-5 text-mist">
+            Mark any moment worth carrying forward. You can review each memory later.
+          </p>
+        </div>
+      </aside>
+
+      {historyOpen && (
+        <button
+          className="fixed inset-0 z-40 bg-black/55 lg:hidden"
+          onClick={() => setHistoryOpen(false)}
+          aria-label="Close history"
         />
       )}
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="max-w-2xl mx-auto">
-          {messages.length === 0 && (
-            <div className="fade-in text-center mt-16">
-              <p className="text-xs uppercase tracking-widest mb-4 sans" style={{ color: 'var(--accent)', opacity: 0.5 }}>
-                {mentor.era}
-              </p>
-              <p className="text-base mb-3" style={{ color: 'var(--muted-foreground)' }}>
-                {mentor.tagline}
-              </p>
-              <p className="sans text-xs" style={{ color: 'var(--muted)', opacity: 0.5 }}>
-                {mentor.approach}
-              </p>
+      <section className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-[68px] flex-none items-center justify-between border-b border-white/[0.07] bg-[#11110f]/90 px-4 backdrop-blur-xl sm:px-6">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setHistoryOpen(true)} className="text-mist lg:hidden" aria-label="Open session history">
+              <Menu size={19} />
+            </button>
+            <AdvisorAvatar advisor={advisor} size="sm" active />
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="font-serif text-lg leading-none text-ivory">{advisor.name}</p>
+                <ChevronDown size={12} className="text-mist" />
+              </div>
+              <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.14em] text-gold">{advisor.archetype}</p>
             </div>
-          )}
-
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`mb-8 fade-in ${msg.role === 'user' ? 'text-right' : ''}`}
-            >
-              {msg.role === 'user' ? (
-                <div className="inline-block max-w-[80%]">
-                  <p
-                    className="sans text-sm px-4 py-3 text-left"
-                    style={{
-                      background: 'var(--surface-raised)',
-                      color: 'var(--foreground)',
-                      borderRadius: '2px',
-                      lineHeight: 1.65,
-                    }}
-                  >
-                    {msg.content}
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  <div className="prose-pascal" style={{ color: 'var(--foreground)' }}>
-                    {msg.content ? (
-                      <p className={msg.streaming ? 'cursor-blink' : ''} style={{ whiteSpace: 'pre-wrap' }}>
-                        {msg.content}
-                      </p>
-                    ) : (
-                      <p className="sans text-sm" style={{ color: 'var(--muted)' }}>
-                        <span className="cursor-blink" />
-                      </p>
-                    )}
-                  </div>
-                  {!msg.streaming && msg.homework?.map((hw, i) => (
-                    <HomeworkCard key={i} hw={hw} />
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-          <div ref={bottomRef} />
-        </div>
-      </div>
-
-      {/* Input */}
-      <div className="px-4 pb-safe pb-6" style={{ borderTop: '1px solid var(--border)' }}>
-        <div className="max-w-2xl mx-auto pt-4">
-          <div
-            className="flex items-end gap-3 px-4 py-3"
-            style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: '2px',
-            }}
-          >
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Speak freely..."
-              rows={1}
-              className="sans flex-1 bg-transparent outline-none resize-none text-sm"
-              style={{
-                color: 'var(--foreground)',
-                lineHeight: 1.6,
-                maxHeight: '120px',
-              }}
-            />
-            <button
-              onClick={() => sendMessage()}
-              disabled={loading || !input.trim()}
-              className="sans text-xs tracking-wide px-3 py-1.5 transition-all duration-200 flex-shrink-0"
-              style={{
-                background: loading || !input.trim() ? 'transparent' : 'var(--accent)',
-                color: loading || !input.trim() ? 'var(--muted)' : 'var(--background)',
-                border: loading || !input.trim() ? '1px solid var(--border)' : 'none',
-                borderRadius: '2px',
-                cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
-              }}
-            >
-              Send
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="hidden rounded-full border border-gold/15 bg-gold/5 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.13em] text-gold sm:inline">
+              Decision
+            </span>
+            <button className="text-mist transition hover:text-gold" aria-label="More session actions">
+              <MoreHorizontal size={19} />
             </button>
           </div>
-          <p className="sans text-xs text-center mt-2" style={{ color: 'var(--muted)', opacity: 0.4 }}>
-            Enter to send · Shift+Enter for new line
-          </p>
+        </header>
+
+        <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-6">
+          <div className="mx-auto max-w-[720px]">
+            {messages.length === 0 ? (
+              <div className="rise-in mx-auto max-w-lg pt-[7vh] text-center">
+                <AdvisorAvatar advisor={advisor} size="xl" active />
+                <p className="mt-6 text-[10px] font-bold uppercase tracking-[0.18em] text-gold">{advisor.archetype}</p>
+                <h1 className="mt-3 font-serif text-4xl tracking-[-0.04em] text-ivory">A private room for a real question.</h1>
+                <p className="mx-auto mt-5 max-w-md font-serif text-lg leading-8 text-parchment/75">
+                  Tell me the situation. I will help you separate the noise from the thing that matters.
+                </p>
+                <div className="mx-auto mt-9 grid max-w-md gap-2 text-left sm:grid-cols-2">
+                  {[
+                    'I am facing a decision.',
+                    'I need a clearer strategy.',
+                    'Help me see what I am avoiding.',
+                    'I want to reflect on what happened.',
+                  ].map((prompt) => (
+                    <button
+                      key={prompt}
+                      onClick={() => setInput(prompt)}
+                      className="rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-3 text-xs leading-5 text-mist transition hover:border-gold/25 hover:text-parchment"
+                    >
+                      {prompt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-8">
+                {messages.map((message) => (
+                  <article key={message.id} className={`rise-in ${message.role === 'user' ? 'ml-auto max-w-[84%]' : 'max-w-[94%]'}`}>
+                    {message.role === 'user' ? (
+                      <div className="rounded-[18px] rounded-br-[5px] border border-white/[0.08] bg-white/[0.06] px-4 py-3">
+                        <p className="text-sm leading-6 text-parchment/90 whitespace-pre-wrap">{message.content}</p>
+                      </div>
+                    ) : (
+                      <div className="flex gap-3 sm:gap-4">
+                        <AdvisorAvatar advisor={advisor} size="sm" />
+                        <div className="min-w-0 flex-1 pt-1">
+                          <p className={`font-serif text-[18px] leading-8 text-parchment/95 whitespace-pre-wrap ${message.streaming ? 'cursor-blink' : ''}`}>
+                            {message.content || ' '}
+                          </p>
+                          {!message.streaming && (
+                            <button
+                              onClick={() => toggleRemembered(message.id)}
+                              className={`mt-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] transition ${
+                                message.remembered ? 'text-gold' : 'text-mist/55 hover:text-gold'
+                              }`}
+                            >
+                              {message.remembered ? <BookmarkCheck size={13} /> : <Bookmark size={13} />}
+                              {message.remembered ? 'Remembered' : 'Remember this'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
         </div>
-      </div>
-    </div>
+
+        <footer className="flex-none border-t border-white/[0.07] bg-[#11110f] px-4 pb-safe pt-3 sm:px-6">
+          <div className="mx-auto max-w-[720px]">
+            <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+              {QUICK_ACTIONS.map((action) => (
+                <button
+                  key={action}
+                  onClick={() => applyQuickAction(action)}
+                  className="whitespace-nowrap rounded-full border border-white/[0.09] bg-white/[0.025] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.11em] text-mist transition hover:border-gold/25 hover:text-gold"
+                >
+                  {action}
+                </button>
+              ))}
+              <button className="flex items-center gap-1 whitespace-nowrap rounded-full border border-gold/20 bg-gold/[0.06] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.11em] text-gold">
+                <Sparkles size={11} /> Summarize
+              </button>
+            </div>
+            <div className="flex items-end gap-3 rounded-[18px] border border-white/[0.1] bg-white/[0.035] p-3 focus-within:border-gold/35">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault()
+                    sendMessage()
+                  }
+                }}
+                rows={1}
+                className="max-h-[150px] flex-1 resize-none bg-transparent text-sm leading-6 text-parchment outline-none placeholder:text-mist/55"
+                placeholder={`Ask ${advisor.name}...`}
+              />
+              <button
+                onClick={sendMessage}
+                disabled={!input.trim() || loading}
+                className="grid h-9 w-9 flex-none place-items-center rounded-full bg-gold-light text-ink transition hover:bg-[#ecd09f] disabled:cursor-not-allowed disabled:bg-white/[0.07] disabled:text-mist/50"
+                aria-label="Send message"
+              >
+                <Send size={15} />
+              </button>
+            </div>
+            <p className="mt-2 text-center text-[10px] tracking-wide text-mist/45">
+              This is reflective guidance, not therapy or emergency support.
+            </p>
+          </div>
+        </footer>
+      </section>
+    </main>
+  )
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense>
+      <ChatPageInner />
+    </Suspense>
   )
 }

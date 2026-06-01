@@ -1,86 +1,110 @@
 import { createClient } from '@/lib/supabase/server'
-import { MENTORS, type MentorId } from '@/lib/mentors/personas'
-import type { Memory, IdentitySummary, HomeworkItem } from '@/types'
+import type { Memory, IdentitySummary } from '@/types'
+import type { Advisor } from '@/lib/council-data'
 
-export async function getRelevantContext(userId: string) {
+export async function getRelevantContext(userId: string, _messageContent: string) {
+  void _messageContent
   const supabase = await createClient()
 
-  const [
-    { data: semanticMemories },
-    { data: narrativeMemories },
-    { data: episodicMemories },
-    { data: identitySummaries },
-    { data: pendingHomework },
-  ] = await Promise.all([
-    supabase
-      .from('memories')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('type', 'semantic')
-      .order('confidence', { ascending: false })
-      .limit(10),
-    supabase
-      .from('memories')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('type', 'narrative')
-      .order('created_at', { ascending: false })
-      .limit(5),
-    supabase
-      .from('memories')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('type', 'episodic')
-      .order('created_at', { ascending: false })
-      .limit(8),
-    supabase
-      .from('identity_summaries')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(1),
-    supabase
-      .from('homework')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-      .limit(5),
-  ])
+  // Fetch recent semantic memories
+  const { data: semanticMemories } = await supabase
+    .from('memories')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('type', 'semantic')
+    .order('confidence', { ascending: false })
+    .limit(10)
+
+  // Fetch recent narrative memories
+  const { data: narrativeMemories } = await supabase
+    .from('memories')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('type', 'narrative')
+    .order('created_at', { ascending: false })
+    .limit(5)
+
+  // Fetch recent episodic memories
+  const { data: episodicMemories } = await supabase
+    .from('memories')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('type', 'episodic')
+    .order('created_at', { ascending: false })
+    .limit(8)
+
+  // Fetch latest identity summary
+  const { data: identitySummaries } = await supabase
+    .from('identity_summaries')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+
+  const identitySummary = identitySummaries?.[0] as IdentitySummary | undefined
 
   return {
     semanticMemories: (semanticMemories || []) as Memory[],
     narrativeMemories: (narrativeMemories || []) as Memory[],
     episodicMemories: (episodicMemories || []) as Memory[],
-    identitySummary: identitySummaries?.[0] as IdentitySummary | undefined,
-    pendingHomework: (pendingHomework || []) as HomeworkItem[],
+    identitySummary,
   }
 }
 
 export function buildSystemPrompt(
   context: Awaited<ReturnType<typeof getRelevantContext>>,
-  mentorId: MentorId = 'pascale',
-  seedIdentity?: Record<string, string>
+  seedIdentity?: Record<string, string>,
+  advisor?: Advisor
 ): string {
-  const { semanticMemories, narrativeMemories, episodicMemories, identitySummary, pendingHomework } = context
-  const mentor = MENTORS[mentorId]
+  const { semanticMemories, narrativeMemories, episodicMemories, identitySummary } = context
+  const activeAdvisor = advisor ?? {
+    name: 'Damon',
+    archetype: 'The Greek Mentor',
+    tone: 'Warm, elevated, demanding',
+    bestFor: 'Character, courage, and self-command',
+    description: 'A formative advisor for character, judgment, and the long work of becoming.',
+    worldview: 'Classical virtue ethics',
+  }
 
-  let prompt = mentor.systemPromptCore + '\n\n'
-  prompt += mentor.coachingInstructions + '\n\n'
+  let prompt = `You are ${activeAdvisor.name}, an AI advisor inside The Council, a private reflection app.
+
+Archetype: ${activeAdvisor.archetype}
+Role: ${activeAdvisor.description}
+Worldview: ${activeAdvisor.worldview}
+Tone: ${activeAdvisor.tone}
+Best for: ${activeAdvisor.bestFor}
+
+Provide thoughtful, grounded, non-coercive guidance. Ask clarifying questions only when they materially improve the answer. Give clear, memorable advice when advice is requested. Distinguish comfort from clarity. Be warm but not servile.
+
+Boundaries:
+- You are not a therapist, doctor, lawyer, financial advisor, priest, or replacement for emergency support.
+- Do not diagnose, manipulate, encourage dependency, claim divine authority, or tell the user they must obey.
+- When the user suggests imminent danger or self-harm, stop the ordinary advisor session and encourage immediate local emergency or crisis support.
+- Help the user act in alignment with their stated values without overclaiming certainty.
+
+`
 
   if (seedIdentity) {
-    prompt += `## Initial self-portrait (what this person shared when they first arrived)
-What they want to become: ${seedIdentity.becoming || ''}
-What people misunderstand about them: ${seedIdentity.misunderstood || ''}
-What they fear becoming: ${seedIdentity.fear || ''}
-Qualities they admire: ${seedIdentity.admire || ''}
-Philosophical/spiritual traditions that resonate: ${seedIdentity.traditions || ''}
+    prompt += `## Who this person is trying to become
+${seedIdentity.becoming || ''}
+
+## What people misunderstand about them
+${seedIdentity.misunderstood || ''}
+
+## What they fear becoming
+${seedIdentity.fear || ''}
+
+## Qualities they admire
+${seedIdentity.admire || ''}
+
+## Philosophical/spiritual traditions that resonate
+${seedIdentity.traditions || ''}
 
 `
   }
 
   if (identitySummary) {
-    prompt += `## Your synthesized portrait of this person\n${identitySummary.summary}\n\n`
+    prompt += `## Current identity summary (your synthesis of who they are)\n${identitySummary.summary}\n\n`
 
     if (identitySummary.traits?.length > 0) {
       prompt += `## Strongest traits you have observed\n`
@@ -100,7 +124,7 @@ Philosophical/spiritual traditions that resonate: ${seedIdentity.traditions || '
   }
 
   if (semanticMemories.length > 0) {
-    prompt += `## Stable facts and values you know about this person\n`
+    prompt += `## What you know about them (stable facts and values)\n`
     semanticMemories.forEach(m => {
       prompt += `- ${m.content}\n`
     })
@@ -108,7 +132,7 @@ Philosophical/spiritual traditions that resonate: ${seedIdentity.traditions || '
   }
 
   if (narrativeMemories.length > 0) {
-    prompt += `## Your evolving interpretation of who they are\n`
+    prompt += `## Your evolving interpretation of them\n`
     narrativeMemories.forEach(m => {
       prompt += `- ${m.content}\n`
     })
@@ -116,22 +140,14 @@ Philosophical/spiritual traditions that resonate: ${seedIdentity.traditions || '
   }
 
   if (episodicMemories.length > 0) {
-    prompt += `## Recent events and moments they have shared\n`
+    prompt += `## Recent events and moments\n`
     episodicMemories.forEach(m => {
       prompt += `- ${m.content}\n`
     })
     prompt += '\n'
   }
 
-  if (pendingHomework.length > 0) {
-    prompt += `## Pending assignments you gave them (they have not yet completed)\n`
-    pendingHomework.forEach(hw => {
-      prompt += `- [${hw.type.toUpperCase()}] "${hw.title}": ${hw.task}\n`
-    })
-    prompt += `\nIMPORTANT: If the conversation touches on these topics, ask them how the assignment is going. Do not ignore outstanding work.\n\n`
-  }
-
-  prompt += `Now respond to what they have just said. Be present. Be real. Let your knowledge of them inform HOW you listen, not just what you say. Do not summarize everything you know — show it through the quality of your attention.`
+  prompt += `Now, respond to what they have just said. Be present. Be real. Do not summarize everything you know — let it inform how you listen and respond.`
 
   return prompt
 }

@@ -1,4 +1,4 @@
-# Pascal — Setup Guide
+# The Council — Setup Guide
 
 ## 1. Push to GitHub
 
@@ -19,6 +19,12 @@ Repo: https://github.com/amolsarva/pascales-wager
 1. Go to https://supabase.com and create a new project
 2. In the SQL Editor, run the contents of `supabase/schema.sql`
 3. Copy your project URL and anon key from Project Settings → API
+4. In Authentication → URL Configuration:
+   - Set **Site URL** to `https://pascales-wager.vercel.app`
+   - Add `https://pascales-wager.vercel.app/auth/callback?next=/council` to **Redirect URLs**
+   - Add `http://localhost:3000/auth/callback?next=/council` to **Redirect URLs** for local development
+
+Supabase rejects confirmation redirects that are not on this allow-list and falls back to the Site URL. The signup form sends the current runtime origin to `/auth/callback?next=/council`, so production, preview, and local environments can return to the app that initiated signup when their callback URLs are allowed.
 
 ---
 
@@ -61,7 +67,7 @@ vercel
 
 1. Open your Vercel URL in Safari on iPhone
 2. Tap Share → "Add to Home Screen"
-3. Pascal is now a native-feeling app on your home screen
+3. The Council is now a native-feeling app on your home screen
 
 ---
 
@@ -81,8 +87,10 @@ npm run dev
 / — Landing page
 /auth/login — Sign in
 /auth/signup — Create account
-/onboarding — Seed identity questionnaire (5 questions)
-/chat — Main conversation with Pascal (streaming)
+/ — Redirects directly into the prototype room
+/council — Persistent browser-local developer room with several advisor responses and synthesis
+/api/council — Generates parallel advisor responses and synthesis from the recent browser-local transcript
+/chat — Single-advisor streaming conversation
 /mirror — "What Pascal Thinks" — identity synthesis page
 /rituals — Daily Examen prompts
 ```
@@ -92,9 +100,9 @@ npm run dev
 - **Semantic**: stable values ("avoids conflict", "values honesty")  
 - **Narrative**: interpretive ("oscillates between intensity and isolation")
 
-After every conversation, gpt-4o-mini extracts memories.
-Every N conversations, gpt-4o synthesizes an identity portrait.
-The system prompt for every chat is built from retrieved memories + identity summary.
+Prototype Council rounds are saved in the current browser and carried into follow-ups.
+Single-advisor chats continue to use gpt-4o-mini memory extraction.
+Every advisor prompt is built from retrieved memories + identity summary.
 
 ### Model Routing
 | Task | Model |

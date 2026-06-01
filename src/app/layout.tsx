@@ -2,18 +2,26 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Pascale',
-  description: 'An AI Paideia Companion — a persistent, reflective, ethically-shaped mentor.',
-  manifest: '/manifest.json',
+  title: 'The Council | Personal AI Advisors',
+  description: 'A private council of AI advisors for decisions, reflection, ambition, and moral clarity.',
+  manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Pascale',
+    title: 'The Council',
+    startupImage: '/apple-touch-icon.png',
+  },
+  icons: {
+    apple: '/apple-touch-icon.png',
+    icon: [
+      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
   },
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0a0a0f',
+  themeColor: '#11110f',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,

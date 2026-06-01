@@ -1,5 +1,4 @@
 export type Role = 'user' | 'assistant' | 'system'
-export type { MentorId, HomeworkType, ParsedHomework } from '@/lib/mentors/personas'
 
 export interface Message {
   id: string
@@ -43,7 +42,6 @@ export interface UserProfile {
   display_name?: string
   onboarding_complete: boolean
   seed_identity?: SeedIdentity
-  mentor_id?: string
   created_at: string
 }
 
@@ -62,17 +60,4 @@ export interface Ritual {
   response?: string
   date: string
   created_at: string
-}
-
-export interface HomeworkItem {
-  id: string
-  user_id: string
-  mentor_id: string
-  title: string
-  type: 'reflection' | 'practice' | 'reading' | 'quiz'
-  task: string
-  status: 'pending' | 'completed'
-  response?: string
-  created_at: string
-  completed_at?: string
 }

@@ -1,99 +1,82 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { ArrowRight, LockKeyhole } from 'lucide-react'
+import { CouncilLogo } from '@/components/council-logo'
+import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault()
     setLoading(true)
     setError('')
 
-    const { error } = await createClient().auth.signInWithPassword({ email, password })
+    const supabase = createClient()
+    const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
 
-    if (error) {
-      setError(error.message)
+    if (loginError) {
+      setError(loginError.message)
       setLoading(false)
-    } else {
-      router.push('/chat')
+      return
     }
+
+    router.push('/council')
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center px-6">
-      <div className="fade-in w-full max-w-sm">
-        <Link href="/" className="sans text-xs tracking-[0.2em] uppercase block text-center mb-12" style={{ color: 'var(--accent)', opacity: 0.7 }}>
-          Pascale
-        </Link>
+    <main className="page-grain landing-background flex min-h-screen items-center justify-center px-5 py-10">
+      <div className="w-full max-w-[420px] rise-in">
+        <div className="text-center">
+          <CouncilLogo />
+          <p className="eyebrow mt-12">Return to your council</p>
+          <h1 className="mt-4 font-serif text-4xl tracking-[-0.04em] text-ivory">Welcome back.</h1>
+          <p className="mt-3 text-sm leading-6 text-mist">Your questions and remembered threads are waiting.</p>
+        </div>
 
-        <h2 className="text-2xl font-normal text-center mb-8" style={{ color: 'var(--foreground)' }}>
-          Return
-        </h2>
+        <form onSubmit={handleLogin} className="glass-card-raised mt-8 p-5 sm:p-6">
+          <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-gold">
+            Email
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@example.com"
+              required
+              className="mt-2 w-full rounded-xl border border-white/[0.09] bg-white/[0.035] px-4 py-3.5 text-sm font-normal tracking-normal text-parchment outline-none transition placeholder:text-mist/50 focus:border-gold/40"
+            />
+          </label>
+          <label className="mt-4 block text-[10px] font-bold uppercase tracking-[0.14em] text-gold">
+            Password
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Your password"
+              required
+              className="mt-2 w-full rounded-xl border border-white/[0.09] bg-white/[0.035] px-4 py-3.5 text-sm font-normal tracking-normal text-parchment outline-none transition placeholder:text-mist/50 focus:border-gold/40"
+            />
+          </label>
 
-        <form onSubmit={handleLogin} className="flex flex-col gap-4">
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-            className="sans w-full px-4 py-3 text-sm outline-none transition-all"
-            style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              color: 'var(--foreground)',
-              borderRadius: '2px',
-            }}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-            className="sans w-full px-4 py-3 text-sm outline-none transition-all"
-            style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              color: 'var(--foreground)',
-              borderRadius: '2px',
-            }}
-          />
+          {error && <p className="mt-4 text-xs leading-5 text-[#d28e7d]">{error}</p>}
 
-          {error && (
-            <p className="sans text-xs text-center" style={{ color: '#c47070' }}>{error}</p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="sans w-full py-3 text-sm tracking-wide mt-2 transition-all duration-200"
-            style={{
-              background: loading ? 'var(--accent-dim)' : 'var(--accent)',
-              color: 'var(--background)',
-              borderRadius: '2px',
-              letterSpacing: '0.05em',
-              cursor: loading ? 'not-allowed' : 'pointer',
-            }}
-          >
-            {loading ? 'Entering...' : 'Enter'}
+          <button type="submit" disabled={loading} className="button-primary mt-6 w-full disabled:opacity-50">
+            {loading ? 'Entering...' : 'Enter your council'} <ArrowRight size={14} />
           </button>
         </form>
 
-        <p className="sans text-xs text-center mt-6" style={{ color: 'var(--muted)' }}>
-          New here?{' '}
-          <Link href="/auth/signup" style={{ color: 'var(--accent)', opacity: 0.8 }}>
-            Create an account
-          </Link>
-        </p>
+        <div className="mt-6 flex items-center justify-center gap-2 text-xs text-mist">
+          <LockKeyhole size={13} className="text-gold" />
+          <span>Private by design.</span>
+          <Link href="/auth/signup" className="text-gold transition hover:text-gold-light">Create an account</Link>
+        </div>
       </div>
     </main>
   )
