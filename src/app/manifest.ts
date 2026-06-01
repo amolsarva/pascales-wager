@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'The Council: Personal AI Advisors',
     short_name: 'The Council',
     description: 'A private council of AI advisors for decisions, reflection, and a more coherent life.',
-    start_url: '/home',
+    start_url: '/council',
     display: 'standalone',
     background_color: '#11110f',
     theme_color: '#11110f',

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Check, LockKeyhole } from 'lucide-react'
+import { ArrowRight, Check, MailCheck, LockKeyhole, RotateCcw } from 'lucide-react'
 import { CouncilLogo } from '@/components/council-logo'
 import { createClient } from '@/lib/supabase/client'
 
@@ -13,6 +13,10 @@ export default function SignupPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [confirmationSent, setConfirmationSent] = useState(false)
+
+  const getConfirmationRedirect = () =>
+    new URL('/auth/callback?next=/council', window.location.origin).toString()
 
   const handleSignup = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -20,10 +24,10 @@ export default function SignupPage() {
     setError('')
 
     const supabase = createClient()
-    const { error: signupError } = await supabase.auth.signUp({
+    const { data, error: signupError } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { emailRedirectTo: getConfirmationRedirect() },
     })
 
     if (signupError) {
@@ -32,7 +36,31 @@ export default function SignupPage() {
       return
     }
 
-    router.push('/onboarding')
+    if (data.session) {
+      router.push('/council')
+      return
+    }
+
+    setConfirmationSent(true)
+    setLoading(false)
+  }
+
+  const resendConfirmation = async () => {
+    setLoading(true)
+    setError('')
+
+    const supabase = createClient()
+    const { error: resendError } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: getConfirmationRedirect() },
+    })
+
+    if (resendError) {
+      setError(resendError.message)
+    }
+
+    setLoading(false)
   }
 
   return (
@@ -61,9 +89,36 @@ export default function SignupPage() {
         </section>
 
         <form onSubmit={handleSignup} className="glass-card-raised rise-in p-5 sm:p-6 [animation-delay:100ms]">
+          {confirmationSent ? (
+            <>
+              <span className="grid h-12 w-12 place-items-center rounded-full border border-gold/25 bg-gold/[0.07] text-gold">
+                <MailCheck size={22} strokeWidth={1.5} />
+              </span>
+              <p className="eyebrow mt-6">Confirm your email</p>
+              <h2 className="mt-3 font-serif text-3xl tracking-[-0.03em] text-ivory">Your council is waiting.</h2>
+              <p className="mt-3 text-sm leading-6 text-parchment/80">
+                Look for an email confirmation in your inbox from SUPABASE.
+              </p>
+              <p className="mt-3 text-xs leading-5 text-mist">
+                Open the confirmation link on this device. It will return you to the Council room running on this site.
+              </p>
+              {error && <p className="mt-4 text-xs leading-5 text-[#d28e7d]">{error}</p>}
+              <button type="button" onClick={resendConfirmation} disabled={loading} className="button-primary mt-6 w-full disabled:opacity-50">
+                {loading ? 'Sending...' : 'Send the confirmation again'} <ArrowRight size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmationSent(false)}
+                className="mt-4 flex w-full items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-mist transition hover:text-gold"
+              >
+                <RotateCcw size={12} /> Use another email
+              </button>
+            </>
+          ) : (
+            <>
           <p className="eyebrow">Create your account</p>
           <h2 className="mt-3 font-serif text-3xl tracking-[-0.03em] text-ivory">Your council begins here.</h2>
-          <p className="mt-2 text-xs leading-5 text-mist">We will start by finding the kind of counsel you need now.</p>
+          <p className="mt-2 text-xs leading-5 text-mist">For now, enter the developer room and bring one real question.</p>
 
           <label className="mt-6 block text-[10px] font-bold uppercase tracking-[0.14em] text-gold">
             Email
@@ -97,6 +152,8 @@ export default function SignupPage() {
           <p className="mt-4 text-center text-[10px] leading-5 text-mist/60">
             By continuing, you acknowledge this is a reflective tool, not therapy or emergency support.
           </p>
+            </>
+          )}
         </form>
       </div>
 

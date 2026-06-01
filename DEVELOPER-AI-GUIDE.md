@@ -6,7 +6,7 @@
 
 ## What this project is
 
-**Pascal** is a persistent AI paideia companion — a reflective mentor that builds a three-layer memory of the user over time. It is a Next.js 15 web app deployable on Vercel, installable as an iOS PWA.
+**The Council** is currently a browser-local prototype: a private room where several advisors answer a developer's questions, synthesize their differences, and remember earlier rounds on the same browser. It is a Next.js 16 web app deployable on Vercel, installable as an iOS PWA.
 
 Repo: `https://github.com/amolsarva/pascales-wager`
 Owner: a@sarva.co
@@ -45,12 +45,13 @@ All keys are at `/Users/MrAnonymous/Documents/root/utils and keys/api_keys.md`.
 ## Architecture
 
 ```
-/                       Landing
+/                       Redirects to /council
 /auth/login             Email/password sign in
 /auth/signup            Create account
-/auth/callback          OAuth code exchange → /onboarding
+/auth/callback          Email confirmation code exchange → /council
 /onboarding             5-question seed identity questionnaire
 /chat                   Main conversation (streaming SSE, conversation history sidebar)
+/council                Browser-local multi-advisor developer room
 /mirror                 Identity synthesis — what Pascal thinks of you
 /rituals                Daily Examen — one reflective question per day
 /timeline               Timeline of Self — all memories/identities/rituals in order
@@ -71,6 +72,14 @@ All keys are at `/Users/MrAnonymous/Documents/root/utils and keys/api_keys.md`.
 ---
 
 ## Memory system
+
+The active prototype path is deliberately simpler than the planned product architecture:
+
+- `/council` stores the current room transcript in browser `localStorage`.
+- `/api/council` receives the last eight rounds, asks the selected advisors in parallel, and returns a synthesis.
+- No account, onboarding, or Supabase row is required to test whether the Council conversation is valuable.
+
+The older Supabase-backed memory system remains available to the deferred single-advisor flow:
 
 After each conversation turn, `gpt-4o-mini` extracts memories. Every N conversations, `gpt-4o` synthesizes an identity portrait.
 
@@ -99,6 +108,7 @@ All tables have **Row Level Security** — users can only read/write their own r
 | Route | Method | Purpose |
 |---|---|---|
 | `/api/chat` | POST | Streaming chat: authenticates, builds memory-injected system prompt, streams gpt-4o, saves messages, async memory extraction |
+| `/api/council` | POST | Returns parallel advisor answers and a synthesis from the browser-local Council transcript |
 | `/api/synthesis` | GET | Returns latest identity summary + all memories + all summaries |
 | `/api/synthesis` | POST | Triggers gpt-4o identity synthesis, saves to DB |
 | `/api/onboarding` | POST | Saves seed identity JSON to users table |
@@ -162,6 +172,8 @@ Required env vars in Vercel dashboard:
 - `OPENAI_API_KEY`
 
 Service role key is intentionally **not** in Vercel (server routes use anon key + user JWT for RLS).
+
+Supabase Authentication → URL Configuration must use `https://pascales-wager.vercel.app` as the Site URL and allow `https://pascales-wager.vercel.app/auth/callback?next=/council` as a redirect URL. Add the localhost equivalent while developing locally.
 
 ---
 
