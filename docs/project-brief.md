@@ -32,11 +32,11 @@ Create a private AI council for reflective decision-making: users bring a real q
 - ~~Persist ritual responses before handing them to chat for reflection.~~ Done.
 - ~~Bring `/timeline` and `/mirror` into the current app navigation/design system.~~ Done.
 - ~~Add memory review controls for editing and deleting stored memories.~~ Done.
+- ~~Replace static home content with user-specific recent sessions, emerging themes, next actions, and record counts.~~ Done.
 
 ## Open Requirements
 
 - Convert `/council` from browser-local storage to authenticated Supabase-backed sessions.
-- Replace static home content with user-specific recent sessions, emerging themes, and next actions.
 - Add advisor creation/editing backed by the `advisors` table.
 - Add session summaries with key points, next actions, and follow-up questions.
 - Add onboarding redirect logic so new users complete setup before landing in the app.
@@ -44,11 +44,11 @@ Create a private AI council for reflective decision-making: users bring a real q
 
 ## Three-Day Engineering Slice In Progress
 
-Focus: make memory review feel like a real product surface.
+Focus: make Home a real operating dashboard.
 
-1. Bring Mirror and Timeline into the main app shell.
-2. Add edit/delete APIs for user-owned memories.
-3. Add memory review controls to the Mirror.
+1. Add a dashboard API that composes persisted sessions, memories, synthesis themes, rituals, and profile data.
+2. Replace hardcoded home cards with user-specific dashboard content and empty states.
+3. Add record counts and a data-driven next action.
 4. Keep the PRD updated as implemented work lands.
 
 ## Non-Goals For This Slice
