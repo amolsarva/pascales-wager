@@ -9,11 +9,23 @@ import type { IdentitySummary, Memory, Ritual } from '@/types'
 type TimelineEntry = {
   id: string
   date: string
-  type: 'memory' | 'identity' | 'ritual'
+  type: 'memory' | 'identity' | 'ritual' | 'session-summary'
   memoryType?: Memory['type']
   content: string
   title: string
   label: string
+  href?: string
+}
+
+type SessionSummaryRow = {
+  id: string
+  session_id: string
+  summary: string
+  key_points: string[] | null
+  next_actions: string[] | null
+  follow_up_question: string | null
+  created_at: string
+  href?: string
 }
 
 const typeLabels: Record<string, string> = {
@@ -22,6 +34,7 @@ const typeLabels: Record<string, string> = {
   narrative: 'Interpretation',
   identity: 'Self-portrait',
   ritual: 'Examen',
+  'session-summary': 'Session summary',
 }
 
 const filters = [
@@ -30,6 +43,7 @@ const filters = [
   { id: 'semantic', label: 'Truths' },
   { id: 'narrative', label: 'Interpretations' },
   { id: 'identity', label: 'Portraits' },
+  { id: 'session-summary', label: 'Summaries' },
   { id: 'ritual', label: 'Rituals' },
 ]
 
@@ -51,6 +65,7 @@ function formatTime(iso: string) {
 
 function getAccent(entry: TimelineEntry) {
   if (entry.type === 'ritual') return 'text-[#9fb3aa]'
+  if (entry.type === 'session-summary') return 'text-[#b7a673]'
   if (entry.type === 'identity') return 'text-gold-light'
   if (entry.memoryType === 'semantic') return 'text-[#b9a27f]'
   if (entry.memoryType === 'narrative') return 'text-[#b99da8]'
@@ -67,15 +82,18 @@ export default function TimelinePage() {
     const load = async () => {
       setError('')
       try {
-        const [synthesisResponse, ritualsResponse] = await Promise.all([
+        const [synthesisResponse, ritualsResponse, summariesResponse] = await Promise.all([
           fetch('/api/synthesis'),
           fetch('/api/rituals'),
+          fetch('/api/session-summaries'),
         ])
         const synthesisData = await synthesisResponse.json()
         const ritualsData = await ritualsResponse.json()
+        const summariesData = await summariesResponse.json()
 
         if (!synthesisResponse.ok) throw new Error(synthesisData.error || 'Unable to load memories.')
         if (!ritualsResponse.ok) throw new Error(ritualsData.error || 'Unable to load rituals.')
+        if (!summariesResponse.ok) throw new Error(summariesData.error || 'Unable to load session summaries.')
 
         const nextEntries: TimelineEntry[] = []
 
@@ -114,6 +132,22 @@ export default function TimelinePage() {
           })
         }
 
+        for (const summary of (summariesData.summaries || []) as SessionSummaryRow[]) {
+          nextEntries.push({
+            id: summary.id,
+            date: summary.created_at,
+            type: 'session-summary',
+            content: [
+              summary.summary,
+              summary.next_actions?.length ? `Next: ${summary.next_actions[0]}` : '',
+              summary.follow_up_question ? `Question: ${summary.follow_up_question}` : '',
+            ].filter(Boolean).join('\n\n'),
+            title: 'Session intelligence',
+            label: 'Session summary',
+            href: summary.href,
+          })
+        }
+
         nextEntries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         setEntries(nextEntries)
       } catch (requestError) {
@@ -137,6 +171,7 @@ export default function TimelinePage() {
     semantic: entries.filter((entry) => entry.memoryType === 'semantic').length,
     narrative: entries.filter((entry) => entry.memoryType === 'narrative').length,
     identity: entries.filter((entry) => entry.type === 'identity').length,
+    'session-summary': entries.filter((entry) => entry.type === 'session-summary').length,
     ritual: entries.filter((entry) => entry.type === 'ritual').length,
   }), [entries])
 
@@ -239,8 +274,8 @@ export default function TimelinePage() {
                               </div>
                               <h2 className="mt-2 font-serif text-2xl leading-8 text-ivory">{entry.title}</h2>
                             </div>
-                            {entry.type === 'memory' && (
-                              <Link href="/mirror" className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.13em] text-gold">
+                            {(entry.type === 'memory' || entry.href) && (
+                              <Link href={entry.href || '/mirror'} className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.13em] text-gold">
                                 Review <ArrowRight size={12} />
                               </Link>
                             )}

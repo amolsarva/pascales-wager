@@ -34,6 +34,16 @@ type RitualRow = {
   created_at: string
 }
 
+type SessionSummaryRow = {
+  id: string
+  session_id: string
+  summary: string
+  key_points: string[] | null
+  next_actions: string[] | null
+  follow_up_question: string | null
+  created_at: string
+}
+
 const dailyRituals = [
   'What did you avoid today?',
   'What energized you?',
@@ -73,11 +83,24 @@ function inferThemes(summary: SummaryRow | null, memories: MemoryRow[]) {
   return Array.from(new Set(semanticThemes)).slice(0, 7)
 }
 
-function chooseNextAction(conversationCount: number, memoryCount: number, summary: SummaryRow | null) {
+function chooseNextAction(
+  conversationCount: number,
+  memoryCount: number,
+  portrait: SummaryRow | null,
+  sessionSummaryCount: number
+) {
   if (conversationCount === 0) {
     return {
       title: 'Begin with one real question.',
       source: 'No sessions yet',
+      href: '/chat',
+    }
+  }
+
+  if (sessionSummaryCount === 0) {
+    return {
+      title: 'Summarize one session into a durable record.',
+      source: 'Session intelligence is empty',
       href: '/chat',
     }
   }
@@ -90,7 +113,7 @@ function chooseNextAction(conversationCount: number, memoryCount: number, summar
     }
   }
 
-  if (!summary) {
+  if (!portrait) {
     return {
       title: 'Form your first Mirror portrait.',
       source: 'Enough memories are ready',
@@ -120,6 +143,7 @@ export async function GET() {
     summariesResult,
     ritualsResult,
     sessionsResult,
+    sessionSummariesResult,
   ] = await Promise.all([
     supabase
       .from('users')
@@ -157,6 +181,12 @@ export async function GET() {
       .select('id, mode')
       .eq('user_id', user.id)
       .limit(120),
+    supabase
+      .from('session_summaries')
+      .select('id, session_id, summary, key_points, next_actions, follow_up_question, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(6),
   ])
 
   if (messagesResult.error) return NextResponse.json({ error: messagesResult.error.message }, { status: 500 })
@@ -164,11 +194,13 @@ export async function GET() {
   if (summariesResult.error) return NextResponse.json({ error: summariesResult.error.message }, { status: 500 })
   if (ritualsResult.error) return NextResponse.json({ error: ritualsResult.error.message }, { status: 500 })
   if (sessionsResult.error) return NextResponse.json({ error: sessionsResult.error.message }, { status: 500 })
+  if (sessionSummariesResult.error) return NextResponse.json({ error: sessionSummariesResult.error.message }, { status: 500 })
 
   const messages = (messagesResult.data || []) as UserMessage[]
   const memories = (memoriesResult.data || []) as MemoryRow[]
   const summaries = (summariesResult.data || []) as SummaryRow[]
   const rituals = (ritualsResult.data || []) as RitualRow[]
+  const sessionSummaries = (sessionSummariesResult.data || []) as SessionSummaryRow[]
   const sessionModeById = new Map(
     ((sessionsResult.data || []) as SessionRow[]).map((session) => [session.id, session.mode])
   )
@@ -208,13 +240,15 @@ export async function GET() {
     conversations,
     latestConversation: conversations[0] || null,
     themes,
-    nextAction: chooseNextAction(conversations.length, memories.length, latestSummary),
+    nextAction: chooseNextAction(conversations.length, memories.length, latestSummary, sessionSummaries.length),
+    latestSessionSummary: sessionSummaries[0] || null,
     dailyRitual: getDailyRitual(),
     latestRitual: rituals[0] || null,
     counts: {
       conversations: seen.size,
       memories: memories.length,
       portraits: summaries.length,
+      summaries: sessionSummaries.length,
       rituals: rituals.length,
     },
   })

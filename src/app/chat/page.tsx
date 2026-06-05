@@ -20,6 +20,7 @@ import { AdvisorAvatar } from '@/components/advisor-avatar'
 import { CouncilLogo } from '@/components/council-logo'
 import { createClient } from '@/lib/supabase/client'
 import { advisors } from '@/lib/council-data'
+import type { SessionSummary } from '@/lib/sessions/summaries'
 
 type ChatMessage = {
   id: string
@@ -55,6 +56,8 @@ function ChatPageInner() {
   const [conversationId, setConversationId] = useState(() => searchParams.get('conversation') || uuidv4())
   const [historyLoading, setHistoryLoading] = useState(true)
   const [historyError, setHistoryError] = useState('')
+  const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null)
+  const [summaryLoading, setSummaryLoading] = useState(false)
 
   const advisor = useMemo(() => {
     const requested = searchParams.get('advisor')
@@ -112,6 +115,21 @@ function ChatPageInner() {
       })
       .finally(() => setLoading(false))
   }, [searchParams])
+
+  const loadSessionSummary = useCallback(async (sessionId: string) => {
+    try {
+      const response = await fetch(`/api/session-summaries?sessionId=${encodeURIComponent(sessionId)}`)
+      if (!response.ok) return
+      const data = await response.json()
+      setSessionSummary(data.summary || null)
+    } catch {
+      // Session summaries are additive; the chat can continue if this read fails.
+    }
+  }, [])
+
+  useEffect(() => {
+    loadSessionSummary(conversationId)
+  }, [conversationId, loadSessionSummary])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -217,6 +235,7 @@ function ChatPageInner() {
     setConversationId(nextConversationId)
     setMessages([])
     setInput('')
+    setSessionSummary(null)
     router.replace(`/chat?advisor=${advisor.id}`)
   }
 
@@ -253,6 +272,29 @@ function ChatPageInner() {
         current.map((item) => item.id === id ? { ...item, savingMemory: false } : item)
       )
       setHistoryError(error instanceof Error ? error.message : 'Unable to save memory')
+    }
+  }
+
+  const summarizeSession = async () => {
+    if (summaryLoading || loading || messages.length < 2) return
+
+    setSummaryLoading(true)
+    setHistoryError('')
+
+    try {
+      const response = await fetch('/api/session-summaries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: conversationId }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Unable to summarize this session')
+      setSessionSummary(data.summary)
+      refreshConversations()
+    } catch (error) {
+      setHistoryError(error instanceof Error ? error.message : 'Unable to summarize this session')
+    } finally {
+      setSummaryLoading(false)
     }
   }
 
@@ -304,6 +346,33 @@ function ChatPageInner() {
             )}
             {historyError && <p className="px-2 py-2 text-xs leading-5 text-[#d28e7d]">{historyError}</p>}
           </div>
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gold">Session summary</p>
+            <button
+              onClick={summarizeSession}
+              disabled={summaryLoading || loading || messages.length < 2}
+              className="text-[10px] font-bold uppercase tracking-[0.12em] text-gold transition hover:text-gold-light disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {summaryLoading ? 'Writing...' : sessionSummary ? 'Refresh' : 'Create'}
+            </button>
+          </div>
+          {sessionSummary ? (
+            <div className="mt-3 space-y-3">
+              <p className="line-clamp-5 text-xs leading-5 text-parchment/80">{sessionSummary.summary}</p>
+              {sessionSummary.next_actions?.[0] && (
+                <p className="border-t border-white/[0.07] pt-3 text-xs leading-5 text-mist">
+                  Next: {sessionSummary.next_actions[0]}
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="mt-3 text-xs leading-5 text-mist/60">
+              Summarize after a few exchanges to save key points and next actions.
+            </p>
+          )}
         </div>
 
         <div className="mt-auto rounded-2xl border border-gold/15 bg-gold/[0.045] p-4">
@@ -427,8 +496,12 @@ function ChatPageInner() {
                   {action}
                 </button>
               ))}
-              <button className="flex items-center gap-1 whitespace-nowrap rounded-full border border-gold/20 bg-gold/[0.06] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.11em] text-gold">
-                <Sparkles size={11} /> Summarize
+              <button
+                onClick={summarizeSession}
+                disabled={summaryLoading || loading || messages.length < 2}
+                className="flex items-center gap-1 whitespace-nowrap rounded-full border border-gold/20 bg-gold/[0.06] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.11em] text-gold disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Sparkles size={11} /> {summaryLoading ? 'Summarizing' : 'Summarize'}
               </button>
             </div>
             <div className="flex items-end gap-3 rounded-[18px] border border-white/[0.1] bg-white/[0.035] p-3 focus-within:border-gold/35">

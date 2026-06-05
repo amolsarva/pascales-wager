@@ -34,39 +34,41 @@ Create a private AI council for reflective decision-making: users bring a real q
 - ~~Add memory review controls for editing and deleting stored memories.~~ Done.
 - ~~Replace static home content with user-specific recent sessions, emerging themes, next actions, and record counts.~~ Done.
 - ~~Convert `/council` from browser-local storage to authenticated Supabase-backed Council threads.~~ Done.
+- ~~Add session summaries with key points, next actions, saved memories, and follow-up questions.~~ Done.
 
 ## Open Requirements
 
 - Add advisor creation/editing backed by the `advisors` table.
-- Add session summaries with key points, next actions, and follow-up questions.
 - Add onboarding redirect logic so new users complete setup before landing in the app.
 - Add tests around API auth, session loading, memory persistence, and chat stream parsing.
 
-## Seven-Day Engineering Sprint Completed
+## Ten-Day Engineering Sprint Completed
 
-Focus: make the multi-advisor Council room a durable product surface instead of a browser-local prototype.
+Focus: complete the first session-intelligence layer.
 
-1. Replaced local Council room storage with authenticated `/api/council` loading and persistence.
-2. Added Council thread creation, saved thread listing, and URL-addressable thread reopening.
-3. Persisted Council questions, advisor responses, and synthesis output into Supabase `sessions` and `messages`.
-4. Created episodic memory records from Council questions so Mirror/Timeline/Home can learn from multi-advisor work.
-5. Updated Home and session APIs so Council threads route back to `/council` and do not pollute single-advisor chat history.
-6. Updated repo recordkeeping in the PRD, task tracker, and README.
+1. Added `/api/session-summaries` for authenticated summary listing and generation.
+2. Generate structured titles, summaries, key points, next actions, memories to save, follow-up questions, dilemmas, tone, and decision status.
+3. Persist generated records into `session_summaries` and update parent `sessions`.
+4. Create durable narrative memory rows from summary-level memories to save.
+5. Added working summarize controls and summary cards in chat and Council.
+6. Added summaries to Home record counts and latest summary display.
+7. Added session summaries to Timeline with filters and reopen links.
+8. Upgraded chat persistence so new chat messages attach to real `sessions` rows.
+9. Updated repo and in-app recordkeeping for the shipped sprint.
 
 ## Roadmap
 
-### Next Seven-Day Candidate
+### Next Ten-Day Candidate
 
-Focus: complete the session intelligence layer.
+Focus: onboarding enforcement and product hardening.
 
-1. Add session summary generation for chat and Council sessions.
-2. Persist key points, next actions, memories to save, and follow-up questions into `session_summaries`.
-3. Show summaries on Home, Timeline, and reopened threads.
-4. Add explicit "end session / summarize" controls.
-5. Add tests for auth, session loading, Council persistence, and summary parsing.
+1. Add onboarding redirect logic for incomplete profiles.
+2. Make onboarding status visible on Home and profile-dependent prompts.
+3. Add focused tests for API auth, session summary generation, session loading, Council persistence, and dashboard routing.
+4. Add lightweight failure states for OpenAI/Supabase errors in chat, Council, and summaries.
+5. Tighten old-session backfill for records created before session rows existed.
 
 ### Later
 
 - Advisor creation/editing backed by the `advisors` table.
-- Onboarding redirect logic so new users complete setup before landing in the app.
 - Production analytics, billing, sharing/export, and richer safety review.

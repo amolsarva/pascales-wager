@@ -7,13 +7,14 @@ const completedItems = [
   'Mirror, Timeline, rituals, and memory review controls',
   'User-specific Home dashboard with themes, counts, and next action',
   'Supabase-backed Council threads with saved questions, advisor replies, and syntheses',
+  'Structured session summaries with key points, next actions, saved memories, and follow-up questions',
 ]
 
 const roadmapItems = [
-  'Generate structured summaries for chat and Council sessions',
-  'Persist key points, next actions, memories to save, and follow-up questions',
-  'Surface summaries on Home, Timeline, and reopened threads',
-  'Add onboarding redirect logic and focused auth/session tests',
+  'Add onboarding redirect logic for incomplete profiles',
+  'Make onboarding status visible in Home and advisor prompts',
+  'Add focused auth, session, Council, dashboard, and summary parsing tests',
+  'Add resilient OpenAI/Supabase failure states',
   'Add advisor creation and editing after the core record model stabilizes',
 ]
 
@@ -60,10 +61,10 @@ export default function ProjectBriefPage() {
         <section className="mt-5 rounded-[22px] border border-gold/20 bg-gold/[0.05] p-5">
           <p className="eyebrow">Latest sprint</p>
           <h2 className="mt-3 font-serif text-2xl tracking-[-0.03em] text-ivory">
-            The Council room now persists.
+            Sessions now summarize into durable records.
           </h2>
           <p className="mt-3 text-sm leading-7 text-mist">
-            The latest seven-day-equivalent sprint moved `/council` from browser-local prototype storage to authenticated Supabase-backed threads, including saved round loading, Council-specific routing, and updated project recordkeeping.
+            The latest ten-day-equivalent sprint added session intelligence: chat and Council sessions can now generate structured summaries, persist key points and next actions, save durable memories, and appear on Home and Timeline.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link href="/council" className="button-primary">

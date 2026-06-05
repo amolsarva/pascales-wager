@@ -7,6 +7,7 @@ Pascale's Wager is a private AI council for reflective decision-making. Users br
 - Authenticated Next.js app with Supabase-backed user records.
 - Single-advisor chat with persisted messages and memory extraction.
 - Multi-advisor Council room with persisted threads, advisor responses, and syntheses.
+- Session summaries with key points, next actions, follow-up questions, and saved memories.
 - Home dashboard with recent threads, themes, next action, and record counts.
 - Mirror, Timeline, rituals, memory review, onboarding, and advisor surfaces.
 

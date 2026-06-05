@@ -21,6 +21,7 @@ import { AppNavigation } from '@/components/app-navigation'
 import { CouncilLogo } from '@/components/council-logo'
 import { advisors } from '@/lib/council-data'
 import { createClient } from '@/lib/supabase/client'
+import type { SessionSummary } from '@/lib/sessions/summaries'
 
 type CouncilAdvisorResponse = {
   advisorId: string
@@ -79,6 +80,8 @@ function CouncilPageInner() {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [authRequired, setAuthRequired] = useState(false)
   const [error, setError] = useState('')
+  const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null)
+  const [summaryLoading, setSummaryLoading] = useState(false)
 
   const selectedAdvisorNames = useMemo(
     () => selectedIds
@@ -110,6 +113,7 @@ function CouncilPageInner() {
   const loadThread = useCallback(async (threadId: string) => {
     setHistoryLoading(true)
     setError('')
+    setSessionSummary(null)
 
     try {
       const response = await fetch(`/api/council?conversationId=${encodeURIComponent(threadId)}`)
@@ -121,6 +125,11 @@ function CouncilPageInner() {
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Unable to open this Council thread.')
       setRounds(data.rounds || [])
+      const summaryResponse = await fetch(`/api/session-summaries?sessionId=${encodeURIComponent(threadId)}`)
+      if (summaryResponse.ok) {
+        const summaryData = await summaryResponse.json()
+        setSessionSummary(summaryData.summary || null)
+      }
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to open this Council thread.')
     } finally {
@@ -172,6 +181,7 @@ function CouncilPageInner() {
     setRounds([])
     setQuestion('')
     setError('')
+    setSessionSummary(null)
     setHistoryOpen(false)
     router.replace('/council')
   }
@@ -216,6 +226,29 @@ function CouncilPageInner() {
       setError(requestError instanceof Error ? requestError.message : 'The Council could not answer just now.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const summarizeThread = async () => {
+    if (summaryLoading || loading || rounds.length === 0) return
+
+    setSummaryLoading(true)
+    setError('')
+
+    try {
+      const response = await fetch('/api/session-summaries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: conversationId }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Unable to summarize this Council thread.')
+      setSessionSummary(data.summary)
+      loadThreads()
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to summarize this Council thread.')
+    } finally {
+      setSummaryLoading(false)
     }
   }
 
@@ -482,6 +515,33 @@ function CouncilPageInner() {
                 <p className="mt-5 border-t border-white/[0.07] pt-4 text-xs leading-5 text-mist">
                   Choose two to five advisors. The saved thread keeps prior rounds available for the next Council answer.
                 </p>
+
+                <div className="mt-5 border-t border-white/[0.07] pt-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="eyebrow">Thread summary</p>
+                    <button
+                      onClick={summarizeThread}
+                      disabled={summaryLoading || loading || rounds.length === 0}
+                      className="text-[10px] font-bold uppercase tracking-[0.12em] text-gold transition hover:text-gold-light disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {summaryLoading ? 'Writing...' : sessionSummary ? 'Refresh' : 'Create'}
+                    </button>
+                  </div>
+                  {sessionSummary ? (
+                    <div className="mt-4 space-y-3">
+                      <p className="line-clamp-6 text-xs leading-5 text-parchment/80">{sessionSummary.summary}</p>
+                      {sessionSummary.follow_up_question && (
+                        <p className="rounded-2xl border border-gold/15 bg-gold/[0.045] p-3 text-xs leading-5 text-mist">
+                          {sessionSummary.follow_up_question}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-4 text-xs leading-5 text-mist/60">
+                      Save a compact record of key points, next actions, and what to ask next.
+                    </p>
+                  )}
+                </div>
               </aside>
             </div>
           )}

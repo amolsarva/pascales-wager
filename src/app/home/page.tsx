@@ -40,6 +40,15 @@ type DashboardData = {
     source: string
     href: string
   }
+  latestSessionSummary: {
+    id: string
+    session_id: string
+    summary: string
+    key_points: string[] | null
+    next_actions: string[] | null
+    follow_up_question: string | null
+    created_at: string
+  } | null
   dailyRitual: string
   latestRitual: {
     id: string
@@ -51,6 +60,7 @@ type DashboardData = {
     conversations: number
     memories: number
     portraits: number
+    summaries: number
     rituals: number
   }
 }
@@ -309,12 +319,36 @@ export default function HomePage() {
               </Link>
             </section>
 
+            {dashboard?.latestSessionSummary && (
+              <Link
+                href="/timeline"
+                className="glass-card group block p-5 transition hover:border-gold/20"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="eyebrow">Latest summary</p>
+                  <Sparkles size={15} className="text-gold" strokeWidth={1.5} />
+                </div>
+                <p className="mt-4 line-clamp-5 text-sm leading-6 text-parchment/80">
+                  {dashboard.latestSessionSummary.summary}
+                </p>
+                {dashboard.latestSessionSummary.next_actions?.[0] && (
+                  <p className="mt-4 border-t border-white/[0.07] pt-3 text-xs leading-5 text-mist">
+                    Next: {dashboard.latestSessionSummary.next_actions[0]}
+                  </p>
+                )}
+                <p className="mt-5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.13em] text-gold">
+                  Open timeline <ChevronRight size={12} className="transition-transform group-hover:translate-x-1" />
+                </p>
+              </Link>
+            )}
+
             <section className="glass-card p-5">
               <p className="eyebrow">Record count</p>
               <div className="mt-5 grid grid-cols-2 gap-3">
                 {[
                   ['Threads', dashboard?.counts.conversations || 0],
                   ['Memories', dashboard?.counts.memories || 0],
+                  ['Summaries', dashboard?.counts.summaries || 0],
                   ['Portraits', dashboard?.counts.portraits || 0],
                   ['Rituals', dashboard?.counts.rituals || 0],
                 ].map(([label, value]) => (

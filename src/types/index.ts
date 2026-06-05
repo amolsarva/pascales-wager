@@ -1,4 +1,4 @@
-export type Role = 'user' | 'assistant' | 'system'
+export type Role = 'user' | 'assistant' | 'system' | 'advisor' | 'synthesis'
 
 export interface Message {
   id: string
@@ -59,5 +59,17 @@ export interface Ritual {
   prompt: string
   response?: string
   date: string
+  created_at: string
+}
+
+export interface SessionSummary {
+  id: string
+  session_id: string
+  user_id: string
+  summary: string
+  key_points: string[]
+  next_actions: string[]
+  memories_to_save: string[]
+  follow_up_question?: string
   created_at: string
 }

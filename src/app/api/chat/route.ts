@@ -6,10 +6,15 @@ import { extractMemoriesFromConversation } from '@/lib/memory/extraction'
 import { advisors } from '@/lib/council-data'
 
 let openai: OpenAI | undefined
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 function getOpenAI() {
   openai ??= new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   return openai
+}
+
+function toPreview(content: string, maxLength = 96) {
+  return content.length > maxLength ? `${content.slice(0, maxLength)}...` : content
 }
 
 export async function POST(request: NextRequest) {
@@ -22,7 +27,39 @@ export async function POST(request: NextRequest) {
     }
 
     const { messages, conversationId, advisorId } = await request.json()
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return NextResponse.json({ error: 'No messages provided' }, { status: 400 })
+    }
+
     const advisor = advisors.find((item) => item.id === advisorId) ?? advisors[0]
+    const safeConversationId = typeof conversationId === 'string' && uuidPattern.test(conversationId)
+      ? conversationId
+      : crypto.randomUUID()
+    const userMessage = messages[messages.length - 1]
+    if (typeof userMessage?.content !== 'string' || !userMessage.content.trim()) {
+      return NextResponse.json({ error: 'No message content provided' }, { status: 400 })
+    }
+
+    await supabase
+      .from('users')
+      .upsert({ id: user.id, email: user.email }, { onConflict: 'id' })
+
+    const { data: existingSession } = await supabase
+      .from('sessions')
+      .select('id, title')
+      .eq('id', safeConversationId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (!existingSession) {
+      await supabase.from('sessions').insert({
+        id: safeConversationId,
+        user_id: user.id,
+        mode: 'freeform',
+        title: toPreview(userMessage?.content || 'Advisor session'),
+        status: 'active',
+      })
+    }
 
     // Get user profile for seed identity
     const { data: profile } = await supabase
@@ -36,12 +73,12 @@ export async function POST(request: NextRequest) {
     const systemPrompt = buildSystemPrompt(context, profile?.seed_identity, advisor)
 
     // Save user message
-    const userMessage = messages[messages.length - 1]
     await supabase.from('messages').insert({
       user_id: user.id,
       role: 'user',
       content: userMessage.content,
-      conversation_id: conversationId,
+      conversation_id: safeConversationId,
+      session_id: safeConversationId,
     })
 
     // Stream response from OpenAI
@@ -74,8 +111,15 @@ export async function POST(request: NextRequest) {
           user_id: user.id,
           role: 'assistant',
           content: fullResponse,
-          conversation_id: conversationId,
+          conversation_id: safeConversationId,
+          session_id: safeConversationId,
         })
+
+        await supabase
+          .from('sessions')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('id', safeConversationId)
+          .eq('user_id', user.id)
 
         // Trigger async memory extraction (fire and forget)
         extractAndStoreMemories(user.id, messages, fullResponse, context).catch(console.error)
