@@ -23,6 +23,7 @@ type DashboardConversation = {
   title: string
   preview: string
   created_at: string
+  mode: 'chat' | 'council'
   href: string
 }
 
@@ -257,14 +258,14 @@ export default function HomePage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-serif text-lg text-ivory">{session.title}</h3>
                         <span className="rounded-full border border-gold/15 bg-gold/5 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-gold">
-                          Saved
+                          {session.mode === 'council' ? 'Council' : 'Saved'}
                         </span>
                       </div>
                       <p className="mt-1 line-clamp-1 text-xs leading-5 text-mist">{session.preview}</p>
                     </div>
                     <div className="hidden text-right sm:block">
                       <p className="text-[10px] uppercase tracking-[0.12em] text-mist/60">{formatShortDate(session.created_at)}</p>
-                      <p className="mt-1 text-xs text-parchment/75">Single advisor</p>
+                      <p className="mt-1 text-xs text-parchment/75">{session.mode === 'council' ? 'Council' : 'Single advisor'}</p>
                     </div>
                     <ChevronRight size={15} className="mt-2 flex-none text-mist transition group-hover:translate-x-1 group-hover:text-gold sm:mt-0" />
                   </Link>

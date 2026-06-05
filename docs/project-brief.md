@@ -33,27 +33,40 @@ Create a private AI council for reflective decision-making: users bring a real q
 - ~~Bring `/timeline` and `/mirror` into the current app navigation/design system.~~ Done.
 - ~~Add memory review controls for editing and deleting stored memories.~~ Done.
 - ~~Replace static home content with user-specific recent sessions, emerging themes, next actions, and record counts.~~ Done.
+- ~~Convert `/council` from browser-local storage to authenticated Supabase-backed Council threads.~~ Done.
 
 ## Open Requirements
 
-- Convert `/council` from browser-local storage to authenticated Supabase-backed sessions.
 - Add advisor creation/editing backed by the `advisors` table.
 - Add session summaries with key points, next actions, and follow-up questions.
 - Add onboarding redirect logic so new users complete setup before landing in the app.
 - Add tests around API auth, session loading, memory persistence, and chat stream parsing.
 
-## Three-Day Engineering Slice In Progress
+## Seven-Day Engineering Sprint Completed
 
-Focus: make Home a real operating dashboard.
+Focus: make the multi-advisor Council room a durable product surface instead of a browser-local prototype.
 
-1. Add a dashboard API that composes persisted sessions, memories, synthesis themes, rituals, and profile data.
-2. Replace hardcoded home cards with user-specific dashboard content and empty states.
-3. Add record counts and a data-driven next action.
-4. Keep the PRD updated as implemented work lands.
+1. Replaced local Council room storage with authenticated `/api/council` loading and persistence.
+2. Added Council thread creation, saved thread listing, and URL-addressable thread reopening.
+3. Persisted Council questions, advisor responses, and synthesis output into Supabase `sessions` and `messages`.
+4. Created episodic memory records from Council questions so Mirror/Timeline/Home can learn from multi-advisor work.
+5. Updated Home and session APIs so Council threads route back to `/council` and do not pollute single-advisor chat history.
+6. Updated repo recordkeeping in the PRD, task tracker, and README.
 
-## Non-Goals For This Slice
+## Roadmap
 
-- Full custom advisor builder.
-- Supabase-backed multi-advisor Council persistence.
-- New database schema.
-- Production analytics, billing, or sharing.
+### Next Seven-Day Candidate
+
+Focus: complete the session intelligence layer.
+
+1. Add session summary generation for chat and Council sessions.
+2. Persist key points, next actions, memories to save, and follow-up questions into `session_summaries`.
+3. Show summaries on Home, Timeline, and reopened threads.
+4. Add explicit "end session / summarize" controls.
+5. Add tests for auth, session loading, Council persistence, and summary parsing.
+
+### Later
+
+- Advisor creation/editing backed by the `advisors` table.
+- Onboarding redirect logic so new users complete setup before landing in the app.
+- Production analytics, billing, sharing/export, and richer safety review.

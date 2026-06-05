@@ -7,6 +7,11 @@ type UserMessage = {
   created_at: string
 }
 
+type SessionRow = {
+  id: string
+  mode: string | null
+}
+
 type MemoryRow = {
   id: string
   type: 'episodic' | 'semantic' | 'narrative'
@@ -114,6 +119,7 @@ export async function GET() {
     memoriesResult,
     summariesResult,
     ritualsResult,
+    sessionsResult,
   ] = await Promise.all([
     supabase
       .from('users')
@@ -146,17 +152,26 @@ export async function GET() {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(10),
+    supabase
+      .from('sessions')
+      .select('id, mode')
+      .eq('user_id', user.id)
+      .limit(120),
   ])
 
   if (messagesResult.error) return NextResponse.json({ error: messagesResult.error.message }, { status: 500 })
   if (memoriesResult.error) return NextResponse.json({ error: memoriesResult.error.message }, { status: 500 })
   if (summariesResult.error) return NextResponse.json({ error: summariesResult.error.message }, { status: 500 })
   if (ritualsResult.error) return NextResponse.json({ error: ritualsResult.error.message }, { status: 500 })
+  if (sessionsResult.error) return NextResponse.json({ error: sessionsResult.error.message }, { status: 500 })
 
   const messages = (messagesResult.data || []) as UserMessage[]
   const memories = (memoriesResult.data || []) as MemoryRow[]
   const summaries = (summariesResult.data || []) as SummaryRow[]
   const rituals = (ritualsResult.data || []) as RitualRow[]
+  const sessionModeById = new Map(
+    ((sessionsResult.data || []) as SessionRow[]).map((session) => [session.id, session.mode])
+  )
   const latestSummary = summaries[0] || null
 
   const seen = new Set<string>()
@@ -166,12 +181,16 @@ export async function GET() {
     if (!message.conversation_id || seen.has(message.conversation_id)) continue
 
     seen.add(message.conversation_id)
+    const mode = sessionModeById.get(message.conversation_id) === 'council' ? 'council' : 'chat'
     conversations.push({
       id: message.conversation_id,
       title: toPreview(message.content, 64),
       preview: toPreview(message.content),
       created_at: message.created_at,
-      href: `/chat?conversation=${message.conversation_id}`,
+      mode,
+      href: mode === 'council'
+        ? `/council?conversation=${message.conversation_id}`
+        : `/chat?conversation=${message.conversation_id}`,
     })
 
     if (conversations.length === 6) break

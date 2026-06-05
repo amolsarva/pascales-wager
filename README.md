@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pascale's Wager
 
-## Getting Started
+Pascale's Wager is a private AI council for reflective decision-making. Users bring real questions to distinct advisor voices, save conversations, extract memories, review identity themes, complete daily rituals, and revisit the record over time.
 
-First, run the development server:
+## Product State
+
+- Authenticated Next.js app with Supabase-backed user records.
+- Single-advisor chat with persisted messages and memory extraction.
+- Multi-advisor Council room with persisted threads, advisor responses, and syntheses.
+- Home dashboard with recent threads, themes, next action, and record counts.
+- Mirror, Timeline, rituals, memory review, onboarding, and advisor surfaces.
+
+The current PRD and roadmap live in [docs/project-brief.md](docs/project-brief.md). The compact engineering task tracker lives in [tasks.md](tasks.md).
+
+## Development
+
+Install dependencies and start the local app:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Required environment variables:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+OPENAI_API_KEY=
+```
 
-## Learn More
+Apply the Supabase schema in [supabase/schema.sql](supabase/schema.sql) before testing authenticated persistence.
 
-To learn more about Next.js, take a look at the following resources:
+## Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The production app is deployed on Vercel:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+[https://pascales-wager.vercel.app](https://pascales-wager.vercel.app)

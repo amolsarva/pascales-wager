@@ -9,6 +9,11 @@ type StoredMessage = {
   conversation_id: string | null
 }
 
+type SessionRow = {
+  id: string
+  mode: string | null
+}
+
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 function toPreview(content: string) {
@@ -28,6 +33,17 @@ export async function GET(request: NextRequest) {
   if (conversationId) {
     if (!uuidPattern.test(conversationId)) {
       return NextResponse.json({ error: 'Invalid conversation id' }, { status: 400 })
+    }
+
+    const { data: session } = await supabase
+      .from('sessions')
+      .select('mode')
+      .eq('user_id', user.id)
+      .eq('id', conversationId)
+      .maybeSingle()
+
+    if (session?.mode === 'council') {
+      return NextResponse.json({ error: 'Open Council threads from the Council room' }, { status: 400 })
     }
 
     const { data, error } = await supabase
@@ -50,22 +66,36 @@ export async function GET(request: NextRequest) {
     })
   }
 
-  const { data, error } = await supabase
-    .from('messages')
-    .select('conversation_id, content, created_at')
-    .eq('user_id', user.id)
-    .eq('role', 'user')
-    .not('conversation_id', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(100)
+  const [{ data, error }, { data: sessionRows, error: sessionError }] = await Promise.all([
+    supabase
+      .from('messages')
+      .select('conversation_id, content, created_at')
+      .eq('user_id', user.id)
+      .eq('role', 'user')
+      .not('conversation_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(100),
+    supabase
+      .from('sessions')
+      .select('id, mode')
+      .eq('user_id', user.id)
+      .limit(120),
+  ])
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (sessionError) return NextResponse.json({ error: sessionError.message }, { status: 500 })
 
+  const councilConversationIds = new Set(
+    ((sessionRows || []) as SessionRow[])
+      .filter((session) => session.mode === 'council')
+      .map((session) => session.id)
+  )
   const seen = new Set<string>()
   const conversations = []
 
   for (const message of data || []) {
     if (!message.conversation_id || seen.has(message.conversation_id)) continue
+    if (councilConversationIds.has(message.conversation_id)) continue
 
     seen.add(message.conversation_id)
     conversations.push({
