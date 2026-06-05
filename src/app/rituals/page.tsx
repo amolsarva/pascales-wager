@@ -33,8 +33,16 @@ export default function RitualsPage() {
     if (!response.trim()) return
     setLoading(true)
 
-    // Route ritual response into the main chat for the advisor to reflect on.
-    router.push(`/chat?ritual=${encodeURIComponent(ritualPrompt)}&response=${encodeURIComponent(response)}`)
+    try {
+      await fetch('/api/rituals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: ritualPrompt, response }),
+      })
+    } finally {
+      // Route ritual response into the main chat for the advisor to reflect on.
+      router.push(`/chat?ritual=${encodeURIComponent(ritualPrompt)}&response=${encodeURIComponent(response)}`)
+    }
   }
 
   return (

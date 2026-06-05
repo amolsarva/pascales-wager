@@ -26,6 +26,7 @@ type ChatMessage = {
   role: 'user' | 'assistant'
   content: string
   remembered?: boolean
+  savingMemory?: boolean
   streaming?: boolean
 }
 
@@ -51,7 +52,9 @@ function ChatPageInner() {
   const [loading, setLoading] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [conversations, setConversations] = useState<Conversation[]>([])
-  const [conversationId] = useState(() => uuidv4())
+  const [conversationId, setConversationId] = useState(() => searchParams.get('conversation') || uuidv4())
+  const [historyLoading, setHistoryLoading] = useState(true)
+  const [historyError, setHistoryError] = useState('')
 
   const advisor = useMemo(() => {
     const requested = searchParams.get('advisor')
@@ -67,32 +70,48 @@ function ChatPageInner() {
         return
       }
 
-      const { data } = await supabase
-        .from('messages')
-        .select('conversation_id, content, created_at')
-        .eq('user_id', user.id)
-        .eq('role', 'user')
-        .order('created_at', { ascending: false })
-        .limit(50)
-
-      if (!data) return
-      const seen = new Set<string>()
-      const recent: Conversation[] = []
-      for (const message of data) {
-        if (message.conversation_id && !seen.has(message.conversation_id)) {
-          seen.add(message.conversation_id)
-          recent.push({
-            id: message.conversation_id,
-            preview: message.content.slice(0, 62) + (message.content.length > 62 ? '...' : ''),
-            created_at: message.created_at,
-          })
-        }
+      try {
+        const response = await fetch('/api/sessions')
+        if (!response.ok) throw new Error('Unable to load recent sessions')
+        const data = await response.json()
+        setConversations(data.conversations || [])
+      } catch (error) {
+        setHistoryError(error instanceof Error ? error.message : 'Unable to load recent sessions')
+      } finally {
+        setHistoryLoading(false)
       }
-      setConversations(recent.slice(0, 10))
     }
 
     init()
   }, [router])
+
+  useEffect(() => {
+    const requestedConversation = searchParams.get('conversation')
+    if (!requestedConversation) return
+
+    setConversationId(requestedConversation)
+    setLoading(true)
+    setHistoryError('')
+
+    fetch(`/api/sessions?conversationId=${encodeURIComponent(requestedConversation)}`)
+      .then((response) => {
+        if (!response.ok) throw new Error('Unable to open that session')
+        return response.json()
+      })
+      .then((data) => {
+        setMessages((data.messages || []).map((message: ChatMessage) => ({
+          id: message.id,
+          role: message.role,
+          content: message.content,
+          remembered: false,
+        })))
+        setHistoryOpen(false)
+      })
+      .catch((error) => {
+        setHistoryError(error instanceof Error ? error.message : 'Unable to open that session')
+      })
+      .finally(() => setLoading(false))
+  }, [searchParams])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -104,6 +123,17 @@ function ChatPageInner() {
     textarea.style.height = 'auto'
     textarea.style.height = `${Math.min(textarea.scrollHeight, 150)}px`
   }, [input])
+
+  const refreshConversations = useCallback(async () => {
+    try {
+      const response = await fetch('/api/sessions')
+      if (!response.ok) return
+      const data = await response.json()
+      setConversations(data.conversations || [])
+    } catch {
+      // The current conversation still works if the sidebar refresh fails.
+    }
+  }, [])
 
   const sendMessage = useCallback(async () => {
     const content = input.trim()
@@ -163,6 +193,7 @@ function ChatPageInner() {
           message.id === assistantMessage.id ? { ...message, streaming: false } : message
         )
       )
+      refreshConversations()
     } catch (error) {
       console.error('Chat error:', error)
       setMessages((current) =>
@@ -179,17 +210,50 @@ function ChatPageInner() {
     } finally {
       setLoading(false)
     }
-  }, [advisor.id, conversationId, input, loading, messages])
+  }, [advisor.id, conversationId, input, loading, messages, refreshConversations])
+
+  const startNewConversation = () => {
+    const nextConversationId = uuidv4()
+    setConversationId(nextConversationId)
+    setMessages([])
+    setInput('')
+    router.replace(`/chat?advisor=${advisor.id}`)
+  }
 
   const applyQuickAction = (action: string) => {
     setInput((current) => current || `${action}: `)
     textareaRef.current?.focus()
   }
 
-  const toggleRemembered = (id: string) => {
+  const rememberMessage = async (id: string) => {
+    const message = messages.find((item) => item.id === id)
+    if (!message || message.remembered || message.savingMemory || message.streaming) return
+
     setMessages((current) =>
-      current.map((message) => message.id === id ? { ...message, remembered: !message.remembered } : message)
+      current.map((item) => item.id === id ? { ...item, savingMemory: true } : item)
     )
+
+    try {
+      const response = await fetch('/api/memories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'narrative',
+          content: message.content,
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Unable to save memory')
+
+      setMessages((current) =>
+        current.map((item) => item.id === id ? { ...item, remembered: true, savingMemory: false } : item)
+      )
+    } catch (error) {
+      setMessages((current) =>
+        current.map((item) => item.id === id ? { ...item, savingMemory: false } : item)
+      )
+      setHistoryError(error instanceof Error ? error.message : 'Unable to save memory')
+    }
   }
 
   return (
@@ -210,11 +274,26 @@ function ChatPageInner() {
           <ArrowLeft size={14} /> Leave the room
         </Link>
 
+        <button
+          onClick={startNewConversation}
+          className="mt-2 flex items-center gap-2 rounded-xl px-2 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-gold transition hover:bg-gold/[0.06]"
+        >
+          <Feather size={14} /> New session
+        </button>
+
         <div className="mt-5 border-t border-white/[0.07] pt-5">
           <p className="px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-gold">Recent sessions</p>
           <div className="mt-3 space-y-1">
-            {conversations.length > 0 ? conversations.map((conversation) => (
-              <button key={conversation.id} className="w-full rounded-lg px-2 py-2.5 text-left transition hover:bg-white/[0.035]">
+            {historyLoading ? (
+              <p className="px-2 py-2 text-xs leading-5 text-mist/60">Reading your recent sessions...</p>
+            ) : conversations.length > 0 ? conversations.map((conversation) => (
+              <button
+                key={conversation.id}
+                onClick={() => router.push(`/chat?advisor=${advisor.id}&conversation=${conversation.id}`)}
+                className={`w-full rounded-lg px-2 py-2.5 text-left transition hover:bg-white/[0.035] ${
+                  conversation.id === conversationId ? 'bg-gold/[0.07]' : ''
+                }`}
+              >
                 <p className="line-clamp-2 text-xs leading-5 text-parchment/80">{conversation.preview}</p>
                 <p className="mt-1 text-[10px] uppercase tracking-[0.1em] text-mist/50">
                   {new Date(conversation.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -223,6 +302,7 @@ function ChatPageInner() {
             )) : (
               <p className="px-2 py-2 text-xs leading-5 text-mist/60">This is a new thread. Your recent sessions will gather here.</p>
             )}
+            {historyError && <p className="px-2 py-2 text-xs leading-5 text-[#d28e7d]">{historyError}</p>}
           </div>
         </div>
 
@@ -314,13 +394,14 @@ function ChatPageInner() {
                           </p>
                           {!message.streaming && (
                             <button
-                              onClick={() => toggleRemembered(message.id)}
+                              onClick={() => rememberMessage(message.id)}
+                              disabled={message.savingMemory || message.remembered}
                               className={`mt-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] transition ${
                                 message.remembered ? 'text-gold' : 'text-mist/55 hover:text-gold'
                               }`}
                             >
                               {message.remembered ? <BookmarkCheck size={13} /> : <Bookmark size={13} />}
-                              {message.remembered ? 'Remembered' : 'Remember this'}
+                              {message.savingMemory ? 'Saving...' : message.remembered ? 'Remembered' : 'Remember this'}
                             </button>
                           )}
                         </div>
