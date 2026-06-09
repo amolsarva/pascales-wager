@@ -16,7 +16,7 @@ export default function SignupPage() {
   const [confirmationSent, setConfirmationSent] = useState(false)
 
   const getConfirmationRedirect = () =>
-    new URL('/auth/callback?next=/council', window.location.origin).toString()
+    new URL('/auth/callback?next=/onboarding', window.location.origin).toString()
 
   const handleSignup = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -37,7 +37,7 @@ export default function SignupPage() {
     }
 
     if (data.session) {
-      router.push('/council')
+      router.push('/onboarding')
       return
     }
 
@@ -100,7 +100,7 @@ export default function SignupPage() {
                 Look for an email confirmation in your inbox from SUPABASE.
               </p>
               <p className="mt-3 text-xs leading-5 text-mist">
-                Open the confirmation link on this device. It will return you to the Council room running on this site.
+                Open the confirmation link on this device. It will return you to private setup on this site.
               </p>
               {error && <p className="mt-4 text-xs leading-5 text-[#d28e7d]">{error}</p>}
               <button type="button" onClick={resendConfirmation} disabled={loading} className="button-primary mt-6 w-full disabled:opacity-50">

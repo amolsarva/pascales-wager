@@ -28,7 +28,8 @@ export default function LoginPage() {
       return
     }
 
-    router.push('/council')
+    const requestedNext = new URLSearchParams(window.location.search).get('next')
+    router.push(requestedNext?.startsWith('/') ? requestedNext : '/home')
   }
 
   return (

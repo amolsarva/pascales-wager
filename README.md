@@ -34,6 +34,12 @@ OPENAI_API_KEY=
 
 Apply the Supabase schema in [supabase/schema.sql](supabase/schema.sql) before testing authenticated persistence.
 
+Run the alpha smoke checks against production:
+
+```bash
+npm run smoke:alpha
+```
+
 ## Deployment
 
 The production app is deployed on Vercel:

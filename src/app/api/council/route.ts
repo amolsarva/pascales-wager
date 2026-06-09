@@ -47,8 +47,6 @@ type CouncilSession = {
   updated_at: string
 }
 
-type RelevantContext = Awaited<ReturnType<typeof getRelevantContext>>
-
 const advisorAssignments: Record<string, string> = {
   damon:
     'Focus on character formation. Ask what choice, habit, or discipline this situation is training. Do not confuse restraint with passivity.',
@@ -65,13 +63,6 @@ const advisorAssignments: Record<string, string> = {
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 let openai: OpenAI | undefined
-
-const emptyContext: RelevantContext = {
-  semanticMemories: [],
-  narrativeMemories: [],
-  episodicMemories: [],
-  identitySummary: undefined,
-}
 
 function getOpenAI() {
   openai ??= new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -96,16 +87,6 @@ function isUuid(value: string | null): value is string {
 
 function toPreview(content: string, maxLength = 72) {
   return content.length > maxLength ? `${content.slice(0, maxLength)}...` : content
-}
-
-function isMissingRelationError(error: unknown) {
-  const maybeError = error as { code?: string; message?: string } | null
-  return (
-    maybeError?.code === 'PGRST205' ||
-    maybeError?.code === '42P01' ||
-    Boolean(maybeError?.message?.includes('Could not find the table')) ||
-    Boolean(maybeError?.message?.includes('relation') && maybeError.message.includes('does not exist'))
-  )
 }
 
 function parseSynthesis(content: string): CouncilSynthesis {
@@ -191,9 +172,7 @@ async function ensureUserProfile(
     .from('users')
     .upsert({ id: user.id, email: user.email }, { onConflict: 'id' })
 
-  if (isMissingRelationError(error)) return false
   if (error) throw error
-  return true
 }
 
 async function ensureCouncilSession(
@@ -233,15 +212,6 @@ async function ensureCouncilSession(
     .eq('user_id', userId)
 
   if (error) throw error
-}
-
-async function loadCouncilContext(userId: string, question: string): Promise<RelevantContext> {
-  try {
-    return await getRelevantContext(userId, question)
-  } catch (error) {
-    if (isMissingRelationError(error)) return emptyContext
-    throw error
-  }
 }
 
 async function answerAsAdvisor(
@@ -351,9 +321,6 @@ export async function GET(request: NextRequest) {
         .in('role', ['user', 'advisor', 'synthesis'])
         .order('created_at', { ascending: true })
 
-      if (isMissingRelationError(error)) {
-        return NextResponse.json({ conversationId, rounds: [] })
-      }
       if (error) throw error
 
       return NextResponse.json({
@@ -370,9 +337,6 @@ export async function GET(request: NextRequest) {
       .order('updated_at', { ascending: false })
       .limit(12)
 
-    if (isMissingRelationError(error)) {
-      return NextResponse.json({ conversations: [] })
-    }
     if (error) throw error
 
     return NextResponse.json({
@@ -417,57 +381,44 @@ export async function POST(request: NextRequest) {
     }
 
     await ensureUserProfile(supabase, user)
+    await ensureCouncilSession(supabase, user.id, conversationId, question)
 
-    let persistenceAvailable = true
-    try {
-      await ensureCouncilSession(supabase, user.id, conversationId, question)
-    } catch (error) {
-      if (!isMissingRelationError(error)) throw error
-      persistenceAvailable = false
-    }
+    const [{ data: history, error: historyError }, { data: profile }] = await Promise.all([
+      supabase
+        .from('messages')
+        .select('id, role, content, created_at')
+        .eq('user_id', user.id)
+        .eq('conversation_id', conversationId)
+        .in('role', ['user', 'advisor', 'synthesis'])
+        .order('created_at', { ascending: true })
+        .limit(80),
+      supabase
+        .from('users')
+        .select('seed_identity')
+        .eq('id', user.id)
+        .single(),
+    ])
 
-    const [{ data: history, error: historyError }, { data: profile }] = persistenceAvailable
-      ? await Promise.all([
-          supabase
-            .from('messages')
-            .select('id, role, content, created_at')
-            .eq('user_id', user.id)
-            .eq('conversation_id', conversationId)
-            .in('role', ['user', 'advisor', 'synthesis'])
-            .order('created_at', { ascending: true })
-            .limit(80),
-          supabase
-            .from('users')
-            .select('seed_identity')
-            .eq('id', user.id)
-            .single(),
-        ])
-      : [{ data: [], error: null }, { data: null }]
-
-    if (isMissingRelationError(historyError)) persistenceAvailable = false
-    else if (historyError) throw historyError
+    if (historyError) throw historyError
 
     const previousMessages = (history || []) as StoredMessage[]
     const transcript = previousMessages.map(formatStoredMessage).join('\n\n').slice(-16000)
-    const context = await loadCouncilContext(user.id, question)
+    const context = await getRelevantContext(user.id, question)
     const now = new Date().toISOString()
 
-    const { data: questionMessage, error: questionError } = persistenceAvailable
-      ? await supabase
-          .from('messages')
-          .insert({
-            user_id: user.id,
-            role: 'user',
-            content: question,
-            conversation_id: conversationId,
-            session_id: conversationId,
-          })
-          .select('id, created_at')
-          .single()
-      : { data: null, error: null }
+    const { data: questionMessage, error: questionError } = await supabase
+      .from('messages')
+      .insert({
+        user_id: user.id,
+        role: 'user',
+        content: question,
+        conversation_id: conversationId,
+        session_id: conversationId,
+      })
+      .select('id, created_at')
+      .single()
 
-    if (isMissingRelationError(questionError)) persistenceAvailable = false
-    else if (questionError) throw questionError
+    if (questionError) throw questionError
 
     const responses = await Promise.all(
       selectedAdvisors.map((advisor) =>
@@ -476,56 +427,51 @@ export async function POST(request: NextRequest) {
     )
     const synthesis = await synthesizeCouncil(question, responses)
 
-    if (persistenceAvailable) {
-      const { error: responseError } = await supabase.from('messages').insert([
-        ...responses.map((response) => ({
+    const { error: responseError } = await supabase.from('messages').insert([
+      ...responses.map((response) => ({
+        user_id: user.id,
+        role: 'advisor',
+        content: JSON.stringify({ kind: 'advisor', ...response } satisfies StoredAdvisorMessage),
+        conversation_id: conversationId,
+        session_id: conversationId,
+      })),
+      {
+        user_id: user.id,
+        role: 'synthesis',
+        content: JSON.stringify({ kind: 'synthesis', ...synthesis } satisfies StoredSynthesisMessage),
+        conversation_id: conversationId,
+        session_id: conversationId,
+      },
+    ])
+
+    if (responseError) throw responseError
+
+    const [{ error: sessionError }, { error: memoryError }] = await Promise.all([
+      supabase
+        .from('sessions')
+        .update({
+          summary: synthesis.headline,
+          main_dilemma: question,
+          decision_status: synthesis.recommendedAction,
+          updated_at: now,
+        })
+        .eq('id', conversationId)
+        .eq('user_id', user.id),
+      supabase
+        .from('memories')
+        .insert({
           user_id: user.id,
-          role: 'advisor',
-          content: JSON.stringify({ kind: 'advisor', ...response } satisfies StoredAdvisorMessage),
-          conversation_id: conversationId,
           session_id: conversationId,
-        })),
-        {
-          user_id: user.id,
-          role: 'synthesis',
-          content: JSON.stringify({ kind: 'synthesis', ...synthesis } satisfies StoredSynthesisMessage),
-          conversation_id: conversationId,
-          session_id: conversationId,
-        },
-      ])
+          type: 'episodic',
+          content: `Council question: ${question}`,
+          confidence: 0.86,
+          importance: 6,
+          source_message_ids: questionMessage?.id ? [questionMessage.id] : undefined,
+        }),
+    ])
 
-      if (isMissingRelationError(responseError)) persistenceAvailable = false
-      else if (responseError) throw responseError
-    }
-
-    if (persistenceAvailable) {
-      const [{ error: sessionError }, { error: memoryError }] = await Promise.all([
-        supabase
-          .from('sessions')
-          .update({
-            summary: synthesis.headline,
-            main_dilemma: question,
-            decision_status: synthesis.recommendedAction,
-            updated_at: now,
-          })
-          .eq('id', conversationId)
-          .eq('user_id', user.id),
-        supabase
-          .from('memories')
-          .insert({
-            user_id: user.id,
-            session_id: conversationId,
-            type: 'episodic',
-            content: `Council question: ${question}`,
-            confidence: 0.86,
-            importance: 6,
-            source_message_ids: questionMessage?.id ? [questionMessage.id] : undefined,
-          }),
-      ])
-
-      if (sessionError && !isMissingRelationError(sessionError)) throw sessionError
-      if (memoryError && !isMissingRelationError(memoryError)) throw memoryError
-    }
+    if (sessionError) throw sessionError
+    if (memoryError) throw memoryError
 
     return NextResponse.json({
       round: {

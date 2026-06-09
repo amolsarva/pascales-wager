@@ -14,11 +14,13 @@
 - [x] Generate structured session summaries for chat and Council sessions.
 - [x] Persist key points, next actions, memories to save, and follow-up questions in `session_summaries`.
 - [x] Surface session summaries on Home, Timeline, chat, and Council threads.
+- [x] Remove temporary Council degraded mode after production Supabase schema setup.
+- [x] Add onboarding redirect enforcement for incomplete profiles.
+- [x] Add alpha smoke checks for schema, protected redirects, public pages, and private API auth.
 
 ## Current Roadmap
 
-- [ ] Add onboarding redirect logic for incomplete profiles.
-- [ ] Add API and UI tests for auth, session loading, memory persistence, Council persistence, and summary parsing.
+- [ ] Add authenticated smoke checks for chat, Council, summaries, dashboard, and timeline.
 - [ ] Backfill old message-only conversations into `sessions` more aggressively.
 - [ ] Add resilient failure states for OpenAI/Supabase errors.
 

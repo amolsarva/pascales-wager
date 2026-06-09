@@ -35,38 +35,38 @@ Create a private AI council for reflective decision-making: users bring a real q
 - ~~Replace static home content with user-specific recent sessions, emerging themes, next actions, and record counts.~~ Done.
 - ~~Convert `/council` from browser-local storage to authenticated Supabase-backed Council threads.~~ Done.
 - ~~Add session summaries with key points, next actions, saved memories, and follow-up questions.~~ Done.
+- ~~Remove degraded Council schema fallback now that production Supabase schema is applied.~~ Done.
+- ~~Add onboarding redirect logic so new users complete setup before landing in the app.~~ Done.
+- ~~Add alpha smoke checks for schema, protected redirects, public pages, and private API auth.~~ Done.
 
 ## Open Requirements
 
 - Add advisor creation/editing backed by the `advisors` table.
-- Add onboarding redirect logic so new users complete setup before landing in the app.
-- Add tests around API auth, session loading, memory persistence, and chat stream parsing.
+- Add deeper authenticated tests around session loading, memory persistence, Council persistence, and summary parsing.
+- Improve user-facing failure states for OpenAI/Supabase errors.
+- Backfill old message-only conversations into `sessions`.
 
-## Ten-Day Engineering Sprint Completed
+## Production Hardening Sprint Completed
 
-Focus: complete the first session-intelligence layer.
+Focus: get the app over the private-alpha reliability bar after production schema setup.
 
-1. Added `/api/session-summaries` for authenticated summary listing and generation.
-2. Generate structured titles, summaries, key points, next actions, memories to save, follow-up questions, dilemmas, tone, and decision status.
-3. Persist generated records into `session_summaries` and update parent `sessions`.
-4. Create durable narrative memory rows from summary-level memories to save.
-5. Added working summarize controls and summary cards in chat and Council.
-6. Added summaries to Home record counts and latest summary display.
-7. Added session summaries to Timeline with filters and reopen links.
-8. Upgraded chat persistence so new chat messages attach to real `sessions` rows.
-9. Updated repo and in-app recordkeeping for the shipped sprint.
+1. Removed the temporary missing-schema degraded mode from the Council API.
+2. Added root `proxy.ts` auth/onboarding enforcement for protected app routes.
+3. Routed fresh signups to onboarding and made login honor protected-route `next` redirects.
+4. Added `npm run smoke:alpha` for repeatable schema, route, redirect, and private API auth checks.
+5. Verified production Supabase tables are present.
 
 ## Roadmap
 
 ### Next Ten-Day Candidate
 
-Focus: onboarding enforcement and product hardening.
+Focus: authenticated end-to-end confidence and failure-state polish.
 
-1. Add onboarding redirect logic for incomplete profiles.
-2. Make onboarding status visible on Home and profile-dependent prompts.
-3. Add focused tests for API auth, session summary generation, session loading, Council persistence, and dashboard routing.
-4. Add lightweight failure states for OpenAI/Supabase errors in chat, Council, and summaries.
-5. Tighten old-session backfill for records created before session rows existed.
+1. Add authenticated test-user smoke checks for chat, Council, summaries, memories, dashboard, and timeline.
+2. Add lightweight failure states for OpenAI/Supabase errors in chat, Council, and summaries.
+3. Tighten old-session backfill for records created before session rows existed.
+4. Make onboarding status visible on Home and profile-dependent prompts.
+5. Add advisor creation/editing backed by the `advisors` table.
 
 ### Later
 
