@@ -57,6 +57,7 @@ export default function HomePage() {
         <nav className="flex gap-5">
           <Link href="/advisors" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>Advisors</Link>
           <Link href="/sessions" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>Sessions</Link>
+          <Link href="/council" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>Council</Link>
           <Link href="/homework" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>
             Homework{pendingHomework > 0 ? ` (${pendingHomework})` : ''}
           </Link>
@@ -173,6 +174,9 @@ export default function HomePage() {
               <div className="flex flex-wrap gap-2">
                 <Link href="/advisors" className="sans text-xs px-4 py-2.5 transition-all" style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted-foreground)', borderRadius: '2px' }}>
                   New session
+                </Link>
+                <Link href="/council" className="sans text-xs px-4 py-2.5 transition-all" style={{ background: 'var(--surface)', border: '1px solid var(--accent)', color: 'var(--accent)', borderRadius: '2px' }}>
+                  Ask the Council
                 </Link>
                 <Link href="/rituals" className="sans text-xs px-4 py-2.5 transition-all" style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted-foreground)', borderRadius: '2px' }}>
                   Daily Examen

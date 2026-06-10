@@ -266,15 +266,11 @@ create policy "Users can manage own council responses" on public.council_respons
 
 #### Features to build
 
-- [ ] **Council session entry** (`/council`) — user selects 2–5 advisors, writes one question
-- [ ] **Parallel advisor calls** — call each advisor's API in parallel (use `Promise.all`)
-- [ ] **Council response layout** — each advisor's response in a named card, side-scrollable on mobile
-- [ ] **Synthesis generation** — after all advisors respond, generate synthesis:
-  - Points of agreement
-  - Productive tensions
-  - Recommended action
-  - What the user should decide for themselves
-- [ ] **Council mode from home** — "Ask the Council" CTA on home screen
+- [x] **Council session entry** (`/council`) — user selects 2–5 advisors, writes one question
+- [x] **Parallel advisor calls** — call each advisor's API in parallel (Promise.all)
+- [x] **Council response layout** — each advisor's response with name + archetype header
+- [x] **Synthesis generation** — synthesis: agreement, tensions, recommended action, what user must decide
+- [x] **Council mode from home** — "Ask the Council" CTA + nav link on home screen
 
 Example synthesis prompt:
 ```
