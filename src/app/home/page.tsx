@@ -56,11 +56,11 @@ export default function HomePage() {
         </span>
         <nav className="flex gap-5">
           <Link href="/advisors" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>Advisors</Link>
+          <Link href="/sessions" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>Sessions</Link>
           <Link href="/homework" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>
             Homework{pendingHomework > 0 ? ` (${pendingHomework})` : ''}
           </Link>
           <Link href="/mirror" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>Mirror</Link>
-          <Link href="/rituals" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>Rituals</Link>
         </nav>
       </header>
 
@@ -95,7 +95,7 @@ export default function HomePage() {
                       ? recentActivity.content.slice(0, 200) + '…'
                       : recentActivity.content}
                   </p>
-                  <Link href="/chat" className="sans text-xs" style={{ color: 'var(--accent)', opacity: 0.8 }}>
+                  <Link href="/sessions" className="sans text-xs" style={{ color: 'var(--accent)', opacity: 0.8 }}>
                     Continue →
                   </Link>
                 </div>
@@ -152,7 +152,7 @@ export default function HomePage() {
                           View
                         </Link>
                         <Link
-                          href={`/chat?advisorId=${advisor.id}`}
+                          href={`/session/new?advisorId=${advisor.id}`}
                           className="sans text-xs px-3 py-1.5 transition-all"
                           style={{ background: 'var(--accent)', color: 'var(--background)', borderRadius: '2px' }}
                         >
@@ -171,8 +171,8 @@ export default function HomePage() {
                 Quick actions
               </p>
               <div className="flex flex-wrap gap-2">
-                <Link href="/chat" className="sans text-xs px-4 py-2.5 transition-all" style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted-foreground)', borderRadius: '2px' }}>
-                  Open chat
+                <Link href="/advisors" className="sans text-xs px-4 py-2.5 transition-all" style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted-foreground)', borderRadius: '2px' }}>
+                  New session
                 </Link>
                 <Link href="/rituals" className="sans text-xs px-4 py-2.5 transition-all" style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted-foreground)', borderRadius: '2px' }}>
                   Daily Examen

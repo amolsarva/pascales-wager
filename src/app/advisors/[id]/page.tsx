@@ -121,7 +121,7 @@ export default function AdvisorDetailPage({ params }: { params: Promise<{ id: st
           ← Advisors
         </Link>
         <Link
-          href={`/chat?advisorId=${id}`}
+          href={`/session/new?advisorId=${id}`}
           className="sans text-sm px-5 py-2 transition-all"
           style={{ background: 'var(--accent)', color: 'var(--background)', borderRadius: '2px' }}
         >

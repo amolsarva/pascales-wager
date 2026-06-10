@@ -81,7 +81,7 @@ export default function AdvisorsPage() {
                       Edit
                     </Link>
                     <Link
-                      href={`/chat?advisorId=${advisor.id}`}
+                      href={`/session/new?advisorId=${advisor.id}`}
                       className="sans text-xs px-3 py-1.5 transition-all"
                       style={{ background: 'var(--accent)', color: 'var(--background)', borderRadius: '2px' }}
                     >

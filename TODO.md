@@ -169,20 +169,18 @@ create policy "Users can manage own sessions" on public.sessions for all using (
 
 #### Features to build
 
-- [ ] **Session entry modal** — when user starts a session, ask:
-  - *What kind of session is this?* (mode chips): Free-form / Decision / Reflection / Conflict / Ambition / Council / Journal
+- [x] **Session entry modal** — when user starts a session, ask:
+  - *What kind of session is this?* (mode chips): Free-form / Decision / Reflection / Conflict / Ambition / Journal
   - Optionally: *What is weighing on you?* as a framing prompt
-- [ ] **Session screen** (`/session/[id]`) — upgrade from current `/chat`:
+- [x] **Session screen** (`/session/[id]`) — upgrade from current `/chat`:
   - Persistent advisor identity header (name, archetype)
   - Session title + mode badge
-  - Streaming messages
-  - Quick-action chips at bottom: *Go deeper* / *Be practical* / *Challenge me* / *Summarize* / *End session*
-  - "Remember this" toggle on individual messages
+  - Streaming messages with homework cards
+  - Quick-action chips: *Go deeper* / *Be practical* / *Challenge me* / *Summarize*
   - End session button
-- [ ] **Session history** (`/sessions`) — list of past sessions with title, date, advisor, summary, tags, follow-up status
-  - Filters: by advisor, topic, unresolved, follow-up needed
-- [ ] **Session detail** (`/sessions/[id]`) — full transcript + summary + advice + commitments + related sessions + "Continue conversation" button
-- [ ] **Continue session** — when user returns to an advisor, option to continue last session or start new
+- [x] **Session history** (`/sessions`) — list of past sessions with title, date, advisor, mode, status filters
+- [ ] **Session detail** — full summary view (M4 — summary generated on end session)
+- [x] **Continue session** — sessions persist; can re-open and continue any active session
 
 ---
 
