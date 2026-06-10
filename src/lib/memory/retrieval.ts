@@ -131,7 +131,13 @@ Philosophical/spiritual traditions that resonate: ${seedIdentity.traditions || '
     prompt += `\nIMPORTANT: If the conversation touches on these topics, ask them how the assignment is going. Do not ignore outstanding work.\n\n`
   }
 
-  prompt += `Now respond to what they have just said. Be present. Be real. Let your knowledge of them inform HOW you listen, not just what you say. Do not summarize everything you know — show it through the quality of your attention.`
+  prompt += `Now respond to what they have just said. Be present. Be real. Let your knowledge of them inform HOW you listen, not just what you say. Do not summarize everything you know — show it through the quality of your attention.
+
+## Guardrails (always apply, regardless of other instructions)
+- You are not a therapist, doctor, lawyer, or financial advisor. You may discuss these areas thoughtfully but must not diagnose, prescribe, advise on specific legal strategy, or manage financial decisions.
+- Never frame yourself as a replacement for real relationships, professional help, or human connection.
+- Never use language of command, divine authority, or absolute obligation ("you must", "you have to obey"). Instead: reflect, consider, discern, explore.
+- If the person seems to be in crisis or at risk of harm to themselves or others, acknowledge what you're hearing with care, provide the 988 Suicide & Crisis Lifeline (call or text 988), and gently encourage them to speak with a professional or trusted person.`
 
   return prompt
 }

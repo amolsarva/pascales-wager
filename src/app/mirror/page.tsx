@@ -180,26 +180,60 @@ export default function MirrorPage() {
               </div>
             )}
 
-            {/* Memory counts */}
+            {/* Memory list */}
             {memories.length > 0 && (
               <div className="mt-16 pt-8" style={{ borderTop: '1px solid var(--border)' }}>
-                <p className="sans text-xs tracking-[0.2em] uppercase mb-4" style={{ color: 'var(--muted)', opacity: 0.5 }}>
-                  What Pascale carries
-                </p>
-                <div className="flex gap-8">
-                  <div>
-                    <p className="text-2xl font-normal" style={{ color: 'var(--foreground)' }}>{episodicMemories.length}</p>
-                    <p className="sans text-xs mt-1" style={{ color: 'var(--muted)' }}>moments</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-normal" style={{ color: 'var(--foreground)' }}>{semanticMemories.length}</p>
-                    <p className="sans text-xs mt-1" style={{ color: 'var(--muted)' }}>truths</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-normal" style={{ color: 'var(--foreground)' }}>{narrativeMemories.length}</p>
-                    <p className="sans text-xs mt-1" style={{ color: 'var(--muted)' }}>interpretations</p>
-                  </div>
+                <div className="flex items-center justify-between mb-4">
+                  <p className="sans text-xs tracking-[0.2em] uppercase" style={{ color: 'var(--muted)', opacity: 0.5 }}>
+                    Memories ({memories.length})
+                  </p>
+                  <a
+                    href="/api/export"
+                    className="sans text-xs"
+                    style={{ color: 'var(--muted)', opacity: 0.6, textDecoration: 'underline' }}
+                  >
+                    Export data
+                  </a>
                 </div>
+
+                {[
+                  { label: 'Truths', items: semanticMemories },
+                  { label: 'Interpretations', items: narrativeMemories },
+                  { label: 'Moments', items: episodicMemories },
+                ].filter(g => g.items.length > 0).map(group => (
+                  <div key={group.label} className="mb-6">
+                    <p className="sans text-xs tracking-[0.1em] uppercase mb-2" style={{ color: 'var(--muted)', opacity: 0.4 }}>
+                      {group.label}
+                    </p>
+                    <div className="flex flex-col gap-1">
+                      {group.items.map(m => (
+                        <div
+                          key={m.id}
+                          className="flex items-start justify-between gap-3 px-3 py-2.5"
+                          style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '2px' }}
+                        >
+                          <p className="sans text-xs flex-1" style={{ color: 'var(--muted-foreground)', lineHeight: 1.6 }}>
+                            {m.content}
+                          </p>
+                          <button
+                            onClick={async () => {
+                              await fetch('/api/memories', {
+                                method: 'DELETE',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ id: m.id }),
+                              })
+                              setMemories(prev => prev.filter(x => x.id !== m.id))
+                            }}
+                            className="sans text-xs flex-shrink-0"
+                            style={{ color: 'var(--muted)', opacity: 0.4 }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </>

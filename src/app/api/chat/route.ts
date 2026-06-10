@@ -52,6 +52,39 @@ export async function POST(request: NextRequest) {
     }
 
     const userMessage = messages[messages.length - 1]
+
+    // Crisis detection — respond with resources before LLM if high-risk language detected
+    const crisisPatterns = /\b(kill myself|end my life|suicide|want to die|no reason to live|self.harm|hurt myself)\b/i
+    if (crisisPatterns.test(userMessage.content)) {
+      const crisisResponse = `I hear you, and I want to make sure you're okay.
+
+What you're carrying right now sounds heavy. Before we continue, please know that real support is available:
+
+**988 Suicide & Crisis Lifeline** — call or text **988** (US, available 24/7)
+**Crisis Text Line** — text HOME to 741741
+
+If you are in immediate danger, please call 911 or go to your nearest emergency room.
+
+I'm here to think alongside you, but this is a moment where a trained counselor can offer something I cannot. Would you like to tell me more about what's happening?`
+
+      await supabase.from('messages').insert([
+        { user_id: user.id, role: 'user', content: userMessage.content, conversation_id: conversationId },
+        { user_id: user.id, role: 'assistant', content: crisisResponse, conversation_id: conversationId },
+      ])
+
+      const encoder = new TextEncoder()
+      const readable = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: crisisResponse })}\n\n`))
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+          controller.close()
+        },
+      })
+      return new Response(readable, {
+        headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
+      })
+    }
+
     await supabase.from('messages').insert({
       user_id: user.id,
       role: 'user',

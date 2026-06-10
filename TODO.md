@@ -288,16 +288,16 @@ Generate a synthesis that identifies: (1) what the advisors agree on, (2) produc
 
 ### M6 — Polish, Safety, Beta
 
-- [ ] **Crisis detection** — if a message contains language suggesting self-harm, imminent danger, or abuse, respond with crisis resources and do not continue as a normal session. Do NOT try to handle this with the advisor prompt — add a classification step before the LLM call.
-- [ ] **Medical/legal/financial guardrails** — add to every system prompt: *"You are not a therapist, doctor, lawyer, or financial advisor. You may discuss these areas thoughtfully but must not diagnose, prescribe, advise on legal strategy, or manage financial decisions."*
-- [ ] **Dependency/authority guardrails** — no advisor should ever say anything like "you must obey," "I have divine authority," or frame itself as a replacement for real relationships. Use: reflect, consider, discern — not command.
-- [ ] **Memory deletion** — users can delete any memory. Deleted memory must be immediately excluded from context.
-- [ ] **Data export** — one-click export of all sessions, memories, and advisor configs as JSON
-- [ ] **Account deletion** — hard delete of all user data
-- [ ] **Rate limiting** — per-user daily session limits to control OpenAI cost
-- [ ] **Error handling** — graceful failures on all API routes, no blank screens
-- [ ] **Mobile Safari QA** — test every screen on iPhone Safari. Pay attention to keyboard push-up on input fields and safe-area padding.
-- [ ] **Feedback button** — simple modal to capture user feedback per session
+- [x] **Crisis detection** — regex pre-check in chat route; returns 988 Lifeline + Crisis Text Line before LLM call
+- [x] **Medical/legal/financial guardrails** — added to `buildSystemPrompt` in retrieval.ts (appended to every system prompt)
+- [x] **Dependency/authority guardrails** — included in guardrails block in system prompt
+- [x] **Memory deletion** — Mirror page shows memory list with × delete button; DELETE /api/memories
+- [x] **Data export** — GET /api/export returns JSON download of advisors, sessions, memories, homework
+- [ ] **Account deletion** — hard delete of all user data (pending)
+- [ ] **Rate limiting** — per-user daily session limits to control OpenAI cost (pending)
+- [ ] **Error handling** — graceful failures on all API routes, no blank screens (partial)
+- [ ] **Mobile Safari QA** — test every screen on iPhone Safari (pending — requires physical device)
+- [ ] **Feedback button** — simple modal to capture user feedback per session (pending)
 
 ---
 
