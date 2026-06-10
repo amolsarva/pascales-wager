@@ -58,14 +58,14 @@ The gap between the current app and the full PRD vision is everything below. Wor
 
 The shell exists. These are the missing pieces:
 
-- [ ] **Landing page** — currently routes straight to login. Build a proper marketing/intro page at `/` that explains the product. Hero copy: *"Build your inner council. Personal AI advisors for decisions, reflection, ambition, and moral clarity."* CTAs: *Start your first session* / *Create an advisor*
-- [ ] **Home screen** (`/home`) — logged-in users currently go straight to `/chat`. Build a home screen with:
-  - [ ] "Continue last session" card
-  - [ ] "Ask the Council" CTA
-  - [ ] Your advisors (cards)
-  - [ ] Recent sessions list
+- [x] **Landing page** — currently routes straight to login. Build a proper marketing/intro page at `/` that explains the product. Hero copy: *"Build your inner council. Personal AI advisors for decisions, reflection, ambition, and moral clarity."* CTAs: *Start your first session* / *Create an advisor*
+- [x] **Home screen** (`/home`) — logged-in users currently go straight to `/chat`. Build a home screen with:
+  - [x] "Continue last session" card
+  - [x] "Ask the Council" CTA
+  - [x] Your advisors (cards)
+  - [ ] Recent sessions list (M3)
   - [ ] "Themes emerging" (later milestone)
-  - [ ] Create new advisor button
+  - [x] Create new advisor button
 - [ ] **Apple touch icon** — add `apple-touch-icon.png` to `/public` and link in `layout.tsx`
 - [ ] **Safe-area CSS** — verify iPhone notch/home bar padding works across all screens
 
@@ -109,25 +109,13 @@ create policy "Users can delete own advisors" on public.advisors for delete usin
 
 #### Features to build
 
-- [ ] **Advisor list page** (`/advisors`) — cards showing name, archetype, "best for", last session date, Ask CTA
-- [ ] **Advisor detail page** (`/advisors/[id]`) — full profile: greeting, role, style, worldview, helps_with, guardrails, memory notes, recent sessions, Edit / Start session buttons
-- [ ] **Manual advisor creation form** — fields: name, archetype, role description, tone, worldview, helps_with (tags), guardrails (tags), challenge/warmth/directness sliders
-- [ ] **AI-powered advisor generation** (`/api/advisors/generate`) — user writes a free-text description like *"A Greek mentor for paideia, focused on character formation, courage, and self-command"* and the API generates a complete advisor profile + system prompt. Use structured JSON output from GPT-4o. Example output:
-  ```json
-  {
-    "name": "Damon",
-    "archetype": "Greek Mentor",
-    "role_description": "A formative advisor for character, excellence, judgment, and self-command.",
-    "tone": "Warm, elevated, precise, occasionally stern.",
-    "worldview": "Classical Greek paideia, virtue ethics, secular humanism.",
-    "helps_with": ["life direction", "discipline", "ambition", "moral clarity"],
-    "guardrails": ["No sexualized mentor dynamic", "No authoritarian guru posture", "No claims of divine authority"],
-    "system_prompt": "..."
-  }
-  ```
-- [ ] **Edit advisor** — same form as creation, pre-populated
-- [ ] **Delete advisor** — with confirmation dialog
-- [ ] **Seed default advisors on onboarding** — after completing onboarding, automatically create 3 starter advisors (see Starter Advisors section below)
+- [x] **Advisor list page** (`/advisors`) — cards showing name, archetype, "best for", last session date, Ask CTA
+- [x] **Advisor detail page** (`/advisors/[id]`) — full profile: greeting, role, style, worldview, helps_with, guardrails, memory notes, recent sessions, Edit / Start session buttons
+- [x] **Manual advisor creation form** — fields: name, archetype, role description, tone, worldview, helps_with (tags), guardrails (tags), challenge/warmth/directness sliders
+- [x] **AI-powered advisor generation** (`/api/advisors/generate`) — user writes a free-text description like *"A Greek mentor for paideia, focused on character formation, courage, and self-command"* and the API generates a complete advisor profile + system prompt. Use structured JSON output from GPT-4o.
+- [x] **Edit advisor** — same form as creation, pre-populated
+- [x] **Delete advisor** — with confirmation dialog
+- [x] **Seed default advisors on onboarding** — after completing onboarding, automatically create 3 starter advisors (see Starter Advisors section below)
 - [ ] **Advisor system prompt template** — use this structure:
 
 ```

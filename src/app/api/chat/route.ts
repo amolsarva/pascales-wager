@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { messages, conversationId } = await request.json()
+    const { messages, conversationId, advisorId } = await request.json()
 
     const { data: profile } = await supabase
       .from('users')
@@ -29,7 +29,27 @@ export async function POST(request: NextRequest) {
     const mentorId: MentorId = (profile?.mentor_id as MentorId) || 'pascale'
 
     const context = await getRelevantContext(user.id)
-    const systemPrompt = buildSystemPrompt(context, mentorId, profile?.seed_identity)
+
+    let systemPrompt: string
+    if (advisorId) {
+      const { data: advisor } = await supabase
+        .from('advisors')
+        .select('system_prompt, name')
+        .eq('id', advisorId)
+        .eq('user_id', user.id)
+        .single()
+      if (advisor?.system_prompt) {
+        systemPrompt = advisor.system_prompt
+        if (context.identitySummary) systemPrompt += `\n\n[User context: ${context.identitySummary}]`
+        if (context.semanticMemories.length > 0) {
+          systemPrompt += '\n\n[Known about this user:\n' + context.semanticMemories.map(m => `- ${m.content}`).join('\n') + ']'
+        }
+      } else {
+        systemPrompt = buildSystemPrompt(context, mentorId, profile?.seed_identity)
+      }
+    } else {
+      systemPrompt = buildSystemPrompt(context, mentorId, profile?.seed_identity)
+    }
 
     const userMessage = messages[messages.length - 1]
     await supabase.from('messages').insert({

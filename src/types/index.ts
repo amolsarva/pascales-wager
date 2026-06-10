@@ -76,3 +76,24 @@ export interface HomeworkItem {
   created_at: string
   completed_at?: string
 }
+
+export interface Advisor {
+  id: string
+  user_id: string
+  name: string
+  archetype?: string
+  role_description?: string
+  tone?: string
+  worldview?: string
+  system_prompt: string
+  avatar_url?: string
+  helps_with: string[]
+  guardrails: string[]
+  challenge_level: number
+  warmth_level: number
+  directness_level: number
+  is_default: boolean
+  created_at: string
+  updated_at: string
+}
+

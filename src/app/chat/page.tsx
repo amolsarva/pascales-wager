@@ -89,11 +89,27 @@ export default function ChatPage() {
   const [currentMentor, setCurrentMentor] = useState<MentorId>('pascale')
   const [showMentorSwitch, setShowMentorSwitch] = useState(false)
   const [switchingMentor, setSwitchingMentor] = useState(false)
+  const [advisorId, setAdvisorId] = useState<string | null>(null)
+  const [advisorName, setAdvisorName] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     const supabase = createClient()
+
+    // Check for advisor in URL params
+    const params = new URLSearchParams(window.location.search)
+    const aid = params.get('advisorId')
+    if (aid) {
+      setAdvisorId(aid)
+      supabase
+        .from('advisors')
+        .select('name')
+        .eq('id', aid)
+        .single()
+        .then(({ data }) => { if (data?.name) setAdvisorName(data.name) })
+    }
+
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return
       const { data } = await supabase
@@ -164,6 +180,7 @@ export default function ChatPage() {
         body: JSON.stringify({
           messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })),
           conversationId,
+          ...(advisorId ? { advisorId } : {}),
         }),
       })
 
@@ -211,7 +228,7 @@ export default function ChatPage() {
     } finally {
       setLoading(false)
     }
-  }, [input, loading, messages, conversationId])
+  }, [input, loading, messages, conversationId, advisorId])
 
   // Auto-send when input is set via ritual params
   useEffect(() => {
@@ -229,6 +246,7 @@ export default function ChatPage() {
   }
 
   const mentor = MENTORS[currentMentor]
+  const displayName = advisorName || mentor.name
 
   return (
     <div className="flex flex-col h-screen" style={{ background: 'var(--background)' }}>
@@ -236,68 +254,82 @@ export default function ChatPage() {
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
         <div className="relative">
-          <button
-            onClick={() => setShowMentorSwitch(v => !v)}
-            className="flex items-center gap-2 transition-opacity hover:opacity-80"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-          >
-            <span className="text-lg font-normal tracking-tight" style={{ color: 'var(--foreground)' }}>
-              {mentor.name}
-            </span>
-            <span className="sans text-xs" style={{ color: 'var(--muted)' }}>
-              ↕
-            </span>
-          </button>
-
-          {showMentorSwitch && (
-            <div
-              className="absolute top-full left-0 mt-2 z-50 w-64"
-              style={{
-                background: 'var(--surface-raised)',
-                border: '1px solid var(--border)',
-                borderRadius: '2px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-              }}
-            >
-              {MENTOR_IDS.map(id => {
-                const m = MENTORS[id]
-                return (
-                  <button
-                    key={id}
-                    onClick={() => switchMentor(id)}
-                    disabled={switchingMentor}
-                    className="w-full text-left px-4 py-3 transition-all"
-                    style={{
-                      background: id === currentMentor ? 'var(--surface)' : 'transparent',
-                      borderBottom: '1px solid var(--border)',
-                      cursor: switchingMentor ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="sans text-sm" style={{ color: 'var(--foreground)' }}>{m.name}</span>
-                      {id === currentMentor && (
-                        <span className="sans text-xs" style={{ color: 'var(--accent)' }}>active</span>
-                      )}
-                    </div>
-                    <p className="sans text-xs mt-0.5" style={{ color: 'var(--muted)', lineHeight: 1.4 }}>
-                      {m.tagline}
-                    </p>
-                  </button>
-                )
-              })}
+          {advisorId ? (
+            <div className="flex items-center gap-3">
+              <Link href="/advisors" className="sans text-xs" style={{ color: 'var(--muted)' }}>← Advisors</Link>
+              <span className="text-lg font-normal tracking-tight" style={{ color: 'var(--foreground)' }}>
+                {displayName}
+              </span>
             </div>
+          ) : (
+            <>
+              <button
+                onClick={() => setShowMentorSwitch(v => !v)}
+                className="flex items-center gap-2 transition-opacity hover:opacity-80"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              >
+                <span className="text-lg font-normal tracking-tight" style={{ color: 'var(--foreground)' }}>
+                  {displayName}
+                </span>
+                <span className="sans text-xs" style={{ color: 'var(--muted)' }}>
+                  ↕
+                </span>
+              </button>
+
+              {showMentorSwitch && (
+                <div
+                  className="absolute top-full left-0 mt-2 z-50 w-64"
+                  style={{
+                    background: 'var(--surface-raised)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '2px',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                  }}
+                >
+                  {MENTOR_IDS.map(id => {
+                    const m = MENTORS[id]
+                    return (
+                      <button
+                        key={id}
+                        onClick={() => switchMentor(id)}
+                        disabled={switchingMentor}
+                        className="w-full text-left px-4 py-3 transition-all"
+                        style={{
+                          background: id === currentMentor ? 'var(--surface)' : 'transparent',
+                          borderBottom: '1px solid var(--border)',
+                          cursor: switchingMentor ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="sans text-sm" style={{ color: 'var(--foreground)' }}>{m.name}</span>
+                          {id === currentMentor && (
+                            <span className="sans text-xs" style={{ color: 'var(--accent)' }}>active</span>
+                          )}
+                        </div>
+                        <p className="sans text-xs mt-0.5" style={{ color: 'var(--muted)', lineHeight: 1.4 }}>
+                          {m.tagline}
+                        </p>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </>
           )}
         </div>
 
         <nav className="flex gap-6">
+          <Link href="/home" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>
+            Home
+          </Link>
+          <Link href="/advisors" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>
+            Advisors
+          </Link>
           <Link href="/homework" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>
             Homework
           </Link>
           <Link href="/mirror" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>
             Mirror
-          </Link>
-          <Link href="/rituals" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>
-            Rituals
           </Link>
         </nav>
       </header>
@@ -315,15 +347,19 @@ export default function ChatPage() {
         <div className="max-w-2xl mx-auto">
           {messages.length === 0 && (
             <div className="fade-in text-center mt-16">
-              <p className="text-xs uppercase tracking-widest mb-4 sans" style={{ color: 'var(--accent)', opacity: 0.5 }}>
-                {mentor.era}
-              </p>
+              {!advisorId && (
+                <p className="text-xs uppercase tracking-widest mb-4 sans" style={{ color: 'var(--accent)', opacity: 0.5 }}>
+                  {mentor.era}
+                </p>
+              )}
               <p className="text-base mb-3" style={{ color: 'var(--muted-foreground)' }}>
-                {mentor.tagline}
+                {advisorId ? displayName : mentor.tagline}
               </p>
-              <p className="sans text-xs" style={{ color: 'var(--muted)', opacity: 0.5 }}>
-                {mentor.approach}
-              </p>
+              {!advisorId && (
+                <p className="sans text-xs" style={{ color: 'var(--muted)', opacity: 0.5 }}>
+                  {mentor.approach}
+                </p>
+              )}
             </div>
           )}
 
