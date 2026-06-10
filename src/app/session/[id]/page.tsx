@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, use } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { v4 as uuidv4 } from 'uuid'
 import type { ParsedHomework } from '@/lib/mentors/personas'
 
@@ -87,6 +88,7 @@ function HomeworkCard({ hw }: { hw: ParsedHomework }) {
 
 export default function SessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const router = useRouter()
   const [session, setSession] = useState<Session | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -199,15 +201,20 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   }, [input, loading, messages, id, session, ended])
 
   const handleEndSession = async () => {
-    if (!confirm('End this session? You can return to read it, but it will be closed.')) return
-    setEnding(true)
-    await fetch(`/api/sessions/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'ended' }),
-    })
-    setEnded(true)
-    setEnding(false)
+    if (messages.length < 2) {
+      if (!confirm('End this session? It will be closed.')) return
+      setEnding(true)
+      await fetch(`/api/sessions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'ended' }),
+      })
+      setEnded(true)
+      setEnding(false)
+      return
+    }
+    // Redirect to summary page for review
+    router.push(`/session/${id}/summary`)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

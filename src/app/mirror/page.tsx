@@ -35,23 +35,21 @@ export default function MirrorPage() {
   return (
     <div className="min-h-screen" style={{ background: 'var(--background)' }}>
       <header className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-        <Link href="/chat" className="text-lg font-normal tracking-tight" style={{ color: 'var(--foreground)' }}>
-          Pascale
+        <Link href="/home" className="text-lg font-normal tracking-tight" style={{ color: 'var(--foreground)' }}>
+          Pascale&apos;s Wager
         </Link>
-        <nav className="flex gap-6">
-          <Link href="/chat" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>
-            Conversation
-          </Link>
-          <Link href="/rituals" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>
-            Rituals
-          </Link>
+        <nav className="flex gap-5">
+          <Link href="/advisors" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>Advisors</Link>
+          <Link href="/sessions" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>Sessions</Link>
+          <Link href="/homework" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>Homework</Link>
+          <Link href="/rituals" className="sans text-xs tracking-wide uppercase" style={{ color: 'var(--muted)', letterSpacing: '0.08em' }}>Rituals</Link>
         </nav>
       </header>
 
       <main className="max-w-2xl mx-auto px-6 py-12">
         <div className="mb-12">
           <p className="sans text-xs tracking-[0.3em] uppercase mb-3" style={{ color: 'var(--accent)', opacity: 0.6 }}>
-            What Pascale Thinks
+            What your advisors carry
           </p>
           <h1 className="text-3xl font-normal" style={{ color: 'var(--foreground)' }}>
             The Mirror

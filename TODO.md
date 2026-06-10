@@ -219,22 +219,9 @@ alter table public.memories add column if not exists approved boolean default tr
 
 #### Features to build
 
-- [ ] **End session flow** — clicking "End session" triggers LLM call with structured output:
-  ```json
-  {
-    "session_title": "string",
-    "summary": "string",
-    "main_dilemma": "string",
-    "emotional_tone": "string",
-    "next_actions": ["string"],
-    "memories_to_save": [
-      { "type": "user_value", "content": "string", "importance": 8 }
-    ],
-    "follow_up_question": "string"
-  }
-  ```
-- [ ] **Memory review UI** — after session ends, show proposed memories with Accept / Edit / Reject per item. Only accepted memories are saved.
-- [ ] **Memory management page** (`/memory` or within Mirror) — list all memories, editable, deletable
+- [x] **End session flow** — clicking "End session" routes to `/session/[id]/summary` which triggers LLM structured output generation
+- [x] **Memory review UI** — `/session/[id]/summary` shows proposed memories with Keep/Remove per item; only accepted are saved
+- [ ] **Memory management page** — Mirror page shows counts; full list/delete UI is pending
 - [ ] **Memory retrieval upgrade** — current retrieval is type-based. Add importance-weighted query:
   ```sql
   select * from memories
