@@ -41,6 +41,12 @@ function isMissingMessageSessionId(error) {
   return message.includes('session_id') && (error.code === 'PGRST204' || error.code === '42703')
 }
 
+function isSessionsTableNotWritable(error) {
+  if (!error) return false
+  const message = (error.message || '').toLowerCase()
+  return error.code === 'PGRST205' && message.includes("'public.sessions'") && message.includes('schema cache')
+}
+
 function chooseTitle(messages) {
   return toPreview(messages.find((message) => message.role === 'user')?.content || messages[0]?.content)
 }
@@ -126,6 +132,11 @@ for (const group of grouped.values()) {
 
     if (!dryRun) {
       const { error } = await supabase.from('sessions').insert(session)
+      if (isSessionsTableNotWritable(error)) {
+        console.log('sessions is not writable through Supabase REST; apply INSERT grants or run this backfill through SQL.')
+        skipped += 1
+        continue
+      }
       if (error) throw error
     }
     sessionsCreated += 1

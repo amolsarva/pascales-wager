@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
-import { apiErrorResponse } from '@/lib/api/errors'
+import { apiErrorResponse, isMissingTableWrite } from '@/lib/api/errors'
 import { createClient } from '@/lib/supabase/server'
 import { getRelevantContext, buildSystemPrompt } from '@/lib/memory/retrieval'
 import { extractMemoriesFromConversation } from '@/lib/memory/extraction'
@@ -77,7 +77,8 @@ export async function POST(request: NextRequest) {
         title: toPreview(userMessage?.content || 'Advisor session'),
         status: 'active',
       })
-      if (sessionError) throw sessionError
+      if (sessionError && !isMissingTableWrite(sessionError, 'sessions')) throw sessionError
+      if (sessionError) console.warn('Sessions table is not writable; chat will use conversation_id history.', sessionError)
     }
 
     // Get user profile for seed identity
@@ -151,7 +152,9 @@ export async function POST(request: NextRequest) {
             .update({ updated_at: new Date().toISOString() })
             .eq('id', safeConversationId)
             .eq('user_id', user.id)
-          logDeferredWriteError(sessionUpdateError)
+          if (!isMissingTableWrite(sessionUpdateError, 'sessions')) {
+            logDeferredWriteError(sessionUpdateError)
+          }
 
           // Trigger async memory extraction (fire and forget)
           extractAndStoreMemories(user.id, messages, fullResponse, context).catch(console.error)

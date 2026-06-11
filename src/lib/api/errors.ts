@@ -23,6 +23,16 @@ export class AppError extends Error {
   }
 }
 
+export function isMissingTableWrite(error: { code?: string; message?: string } | null | undefined, table: string) {
+  if (!error) return false
+  const message = error.message?.toLowerCase() || ''
+  return (
+    error.code === 'PGRST205' &&
+    message.includes(`'public.${table}'`) &&
+    message.includes('schema cache')
+  )
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }

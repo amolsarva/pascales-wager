@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
-import { apiErrorResponse } from '@/lib/api/errors'
+import { apiErrorResponse, isMissingTableWrite } from '@/lib/api/errors'
 import { createClient } from '@/lib/supabase/server'
 import { advisors, type Advisor } from '@/lib/council-data'
 import { buildSystemPrompt, getRelevantContext } from '@/lib/memory/retrieval'
@@ -210,7 +210,8 @@ async function ensureCouncilSession(
       title: toPreview(title, 96),
       status: 'active',
     })
-    if (error) throw error
+    if (error && !isMissingTableWrite(error, 'sessions')) throw error
+    if (error) console.warn('Sessions table is not writable; Council will use conversation_id history.', error)
     return
   }
 
@@ -223,7 +224,7 @@ async function ensureCouncilSession(
     .eq('id', conversationId)
     .eq('user_id', userId)
 
-  if (error) throw error
+  if (error && !isMissingTableWrite(error, 'sessions')) throw error
 }
 
 async function answerAsAdvisor(
@@ -495,7 +496,7 @@ export async function POST(request: NextRequest) {
         }),
     ])
 
-    if (sessionError) throw sessionError
+    if (sessionError && !isMissingTableWrite(sessionError, 'sessions')) throw sessionError
     if (memoryError) throw memoryError
 
     return NextResponse.json({

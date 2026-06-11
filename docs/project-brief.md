@@ -43,12 +43,14 @@ Create a private AI council for reflective decision-making: users bring a real q
 - ~~Add an operator backfill for legacy message-only conversations into `sessions`.~~ Done.
 - ~~Return user-facing OpenAI/Supabase failure payloads from chat, Council, and summary endpoints.~~ Done.
 - ~~Display chat API failure messages in the streaming UI instead of a generic quiet-room fallback.~~ Done.
+- ~~Populate Vercel production Supabase/OpenAI environment variables after discovering they were empty.~~ Done.
+- ~~Keep chat, Council, and summaries functional when `sessions` is readable but not writable through Supabase REST.~~ Done.
 
 ## Open Requirements
 
 - Add advisor creation/editing backed by the `advisors` table.
 - Run the expanded authenticated smoke suite against the freshly deployed production build.
-- Decide whether to migrate `messages.session_id` into production or keep `conversation_id` as the canonical session join.
+- Decide whether to grant `sessions` writes through Supabase REST or keep `conversation_id` as the canonical session join.
 - Add production analytics and reliability monitoring.
 
 ## Production Hardening Sprint Completed
@@ -70,6 +72,8 @@ Focus: remove the main alpha breakage path and make production verification stro
 3. Improved chat UI failure handling so server-provided messages are shown to the user.
 4. Expanded `npm run smoke:alpha` to create a temporary authenticated user, seed a realistic private record, and verify dashboard, session loading, summaries, synthesis/memory reads, Council history, and timeline access.
 5. Added `npm run backfill:sessions` with `--dry-run` support for legacy message-only conversations.
+6. Fixed live Vercel environment configuration after production Supabase/OpenAI variables were found to be empty.
+7. Added read-only `sessions` tolerance after Supabase REST accepted message writes but rejected `sessions` inserts.
 
 ## Roadmap
 
@@ -81,7 +85,7 @@ Focus: make the alpha administrable and observable.
 2. Add advisor creation/editing backed by the `advisors` table.
 3. Add production analytics and reliability monitoring.
 4. Make onboarding status visible on Home and profile-dependent prompts.
-5. Choose and document the long-term session join model: migrate `messages.session_id` or standardize on `conversation_id`.
+5. Choose and document the long-term session join model: grant `sessions` writes or standardize on `conversation_id`.
 
 ### Later
 

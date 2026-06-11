@@ -147,7 +147,8 @@ if (supabaseUrl && supabaseAnonKey && serviceRoleKey) {
       const incompleteHome = await expectStatus('/home', [307, 308], {
         headers: { Cookie: cookieHeaderFromJar(cookieJar) },
       })
-      assert((incompleteHome.headers.get('location') || '').includes('/onboarding'), 'Incomplete user was not redirected to onboarding')
+      const incompleteLocation = incompleteHome.headers.get('location') || ''
+      assert(incompleteLocation.includes('/onboarding'), `Incomplete user redirected to ${incompleteLocation || 'nowhere'}`)
 
       const { error: completeError } = await supabase
         .from('users')
@@ -160,26 +161,6 @@ if (supabaseUrl && supabaseAnonKey && serviceRoleKey) {
       })
 
       const now = new Date().toISOString()
-      const { error: chatSessionError } = await supabase.from('sessions').insert({
-        id: chatSessionId,
-        user_id: userId,
-        mode: 'freeform',
-        title: 'Alpha smoke chat',
-        summary: 'Alpha smoke summary',
-        status: 'active',
-      })
-      assert(!chatSessionError, chatSessionError?.message || 'Unable to create smoke chat session')
-
-      const { error: councilSessionError } = await supabase.from('sessions').insert({
-        id: councilSessionId,
-        user_id: userId,
-        mode: 'council',
-        title: 'Alpha smoke council',
-        summary: 'Alpha smoke council summary',
-        status: 'active',
-      })
-      assert(!councilSessionError, councilSessionError?.message || 'Unable to create smoke Council session')
-
       const messageRows = [
         {
           user_id: userId,
@@ -201,6 +182,32 @@ if (supabaseUrl && supabaseAnonKey && serviceRoleKey) {
           user_id: userId,
           role: 'user',
           content: 'Alpha smoke Council question',
+          conversation_id: councilSessionId,
+          session_id: councilSessionId,
+          created_at: now,
+        },
+        {
+          user_id: userId,
+          role: 'advisor',
+          content: JSON.stringify({
+            kind: 'advisor',
+            advisorId: 'damon',
+            content: 'Alpha smoke Council advisor response',
+          }),
+          conversation_id: councilSessionId,
+          session_id: councilSessionId,
+          created_at: now,
+        },
+        {
+          user_id: userId,
+          role: 'synthesis',
+          content: JSON.stringify({
+            kind: 'synthesis',
+            headline: 'Alpha smoke Council headline',
+            synthesis: 'Alpha smoke Council synthesis',
+            recommendedAction: 'Keep hardening alpha',
+            openQuestion: 'What should be checked next?',
+          }),
           conversation_id: councilSessionId,
           session_id: councilSessionId,
           created_at: now,
@@ -261,6 +268,12 @@ if (supabaseUrl && supabaseAnonKey && serviceRoleKey) {
       await expectStatus('/api/council', [200], {
         headers: { Cookie: cookieHeaderFromJar(cookieJar) },
       })
+
+      const councilHistory = await expectStatus(`/api/council?conversationId=${councilSessionId}`, [200], {
+        headers: { Cookie: cookieHeaderFromJar(cookieJar) },
+      })
+      const councilHistoryData = await councilHistory.json()
+      assert(councilHistoryData.rounds?.length >= 1, 'Council API did not return seeded round')
 
       await expectStatus('/timeline', [200], {
         headers: { Cookie: cookieHeaderFromJar(cookieJar) },

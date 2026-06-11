@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
-import { apiErrorResponse } from '@/lib/api/errors'
+import { apiErrorResponse, isMissingTableWrite } from '@/lib/api/errors'
 import { createClient } from '@/lib/supabase/server'
 import {
   formatSummaryTranscript,
@@ -98,7 +98,11 @@ async function ensureSession(
     .select('id, mode, title')
     .single()
 
-  if (error) throw error
+  if (error && !isMissingTableWrite(error, 'sessions')) throw error
+  if (error) {
+    console.warn('Sessions table is not writable; summary will persist without a session row.', error)
+    return { id: sessionId, mode, title: toPreview(title, 96) } satisfies StoredSession
+  }
   return data as StoredSession
 }
 
@@ -245,7 +249,7 @@ export async function POST(request: NextRequest) {
       .eq('id', sessionId)
       .eq('user_id', user.id)
 
-    if (sessionUpdateError) throw sessionUpdateError
+    if (sessionUpdateError && !isMissingTableWrite(sessionUpdateError, 'sessions')) throw sessionUpdateError
 
     if (memoryRows.length > 0) {
       const { error: memoryError } = await supabase.from('memories').insert(memoryRows)

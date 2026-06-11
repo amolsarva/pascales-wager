@@ -22,13 +22,15 @@
 - [x] Add a `backfill:sessions` operator script for legacy message-only conversations.
 - [x] Add resilient failure payloads for OpenAI/Supabase errors in chat, Council, and summaries.
 - [x] Surface API failure messages in the chat stream UI.
+- [x] Populate Vercel production Supabase/OpenAI environment variables after discovering they were empty.
+- [x] Keep core chat/Council flows working when `sessions` is readable but not writable through Supabase REST.
 
 ## Current Roadmap
 
 - [ ] Run the expanded alpha smoke against the freshly deployed production build.
 - [ ] Add advisor creation/editing backed by the `advisors` table.
 - [ ] Add production analytics and reliability monitoring.
-- [ ] Decide whether to migrate production `messages` to include `session_id` or keep `conversation_id` as the canonical join.
+- [ ] Decide whether to grant production `sessions` writes through Supabase REST or keep `conversation_id` as the canonical join.
 
 ## Later
 
