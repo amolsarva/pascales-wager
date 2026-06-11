@@ -46,12 +46,13 @@ Create a private AI council for reflective decision-making: users bring a real q
 - ~~Populate Vercel production Supabase/OpenAI environment variables after discovering they were empty.~~ Done.
 - ~~Keep chat, Council, and summaries functional when `sessions` is readable but not writable through Supabase REST.~~ Done.
 - ~~Store Council advisor/synthesis records under the production-allowed `assistant` message role.~~ Done.
+- ~~Return transient generated summaries when `session_summaries` is readable but not writable.~~ Done.
 
 ## Open Requirements
 
 - Add advisor creation/editing backed by the `advisors` table.
 - Run the expanded authenticated smoke suite against the freshly deployed production build.
-- Decide whether to grant `sessions` writes through Supabase REST or keep `conversation_id` as the canonical session join.
+- Decide whether to grant Supabase REST writes for `sessions` and `session_summaries`, or keep the current transient/fallback behavior.
 - Add production analytics and reliability monitoring.
 
 ## Production Hardening Sprint Completed
@@ -76,6 +77,7 @@ Focus: remove the main alpha breakage path and make production verification stro
 6. Fixed live Vercel environment configuration after production Supabase/OpenAI variables were found to be empty.
 7. Added read-only `sessions` tolerance after Supabase REST accepted message writes but rejected `sessions` inserts.
 8. Adjusted Council persistence to respect the production `messages.role` constraint while retaining structured advisor/synthesis payloads.
+9. Added transient summary fallback after Supabase REST rejected `session_summaries` inserts.
 
 ## Roadmap
 
@@ -87,7 +89,7 @@ Focus: make the alpha administrable and observable.
 2. Add advisor creation/editing backed by the `advisors` table.
 3. Add production analytics and reliability monitoring.
 4. Make onboarding status visible on Home and profile-dependent prompts.
-5. Choose and document the long-term session join model: grant `sessions` writes or standardize on `conversation_id`.
+5. Choose and document the long-term session model: grant table writes or standardize on `conversation_id` plus transient summaries.
 
 ### Later
 

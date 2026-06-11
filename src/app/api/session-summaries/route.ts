@@ -32,6 +32,25 @@ function firstUserMessage(messages: SummaryMessage[]) {
   return messages.find((message) => message.role === 'user')?.content || 'Reflective session'
 }
 
+function toTransientSummary(
+  userId: string,
+  sessionId: string,
+  generated: GeneratedSessionSummary
+) {
+  return {
+    id: crypto.randomUUID(),
+    session_id: sessionId,
+    user_id: userId,
+    summary: generated.summary,
+    key_points: generated.keyPoints,
+    next_actions: generated.nextActions,
+    memories_to_save: generated.memoriesToSave,
+    follow_up_question: generated.followUpQuestion,
+    created_at: new Date().toISOString(),
+    transient: true,
+  }
+}
+
 async function generateSummary(transcript: string): Promise<GeneratedSessionSummary> {
   const response = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',
@@ -225,7 +244,10 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
-    if (summaryError) throw summaryError
+    if (summaryError && !isMissingTableWrite(summaryError, 'session_summaries')) throw summaryError
+    const safeSummary = summaryError
+      ? toTransientSummary(user.id, sessionId, generated)
+      : summary
 
     const memoryRows = generated.memoriesToSave.map((content) => ({
       user_id: user.id,
@@ -256,7 +278,11 @@ export async function POST(request: NextRequest) {
       if (memoryError) throw memoryError
     }
 
-    return NextResponse.json({ summary, generated })
+    return NextResponse.json({
+      summary: safeSummary,
+      generated,
+      persisted: !summaryError,
+    })
   } catch (error) {
     console.error('Session summary generation error:', error)
     return apiErrorResponse(error, 'Unable to summarize this session. Please try again.')

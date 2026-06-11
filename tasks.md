@@ -25,13 +25,14 @@
 - [x] Populate Vercel production Supabase/OpenAI environment variables after discovering they were empty.
 - [x] Keep core chat/Council flows working when `sessions` is readable but not writable through Supabase REST.
 - [x] Store Council advisor/synthesis records under the production-allowed `assistant` message role.
+- [x] Return transient generated summaries when `session_summaries` is readable but not writable.
 
 ## Current Roadmap
 
 - [ ] Run the expanded alpha smoke against the freshly deployed production build.
 - [ ] Add advisor creation/editing backed by the `advisors` table.
 - [ ] Add production analytics and reliability monitoring.
-- [ ] Decide whether to grant production `sessions` writes through Supabase REST or keep `conversation_id` as the canonical join.
+- [ ] Grant Supabase REST writes for `sessions` and `session_summaries`, or formally keep the current transient/fallback behavior.
 
 ## Later
 
