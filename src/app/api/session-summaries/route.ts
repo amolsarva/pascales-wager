@@ -151,6 +151,12 @@ export async function GET(request: NextRequest) {
     }
 
     const { data, error } = await query
+    if (error && isMissingTableWrite(error, 'session_summaries')) {
+      return NextResponse.json({
+        summaries: [],
+        summary: null,
+      })
+    }
     if (error) throw error
 
     const sessionIds = Array.from(new Set((data || []).map((summary) => summary.session_id).filter(Boolean)))
