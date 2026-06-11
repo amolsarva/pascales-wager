@@ -89,6 +89,12 @@ function isMissingTableWrite(error, table) {
   return error.code === 'PGRST205' && message.includes(`'public.${table}'`) && message.includes('schema cache')
 }
 
+function isMissingColumn(error, column) {
+  if (!error) return false
+  const message = (error.message || '').toLowerCase()
+  return message.includes(column.toLowerCase()) && (error.code === 'PGRST204' || error.code === '42703')
+}
+
 function omitMessageSessionId(row) {
   const { session_id: _sessionId, ...rest } = row
   return rest
@@ -249,7 +255,18 @@ if (supabaseUrl && supabaseAnonKey && serviceRoleKey) {
         confidence: 1,
         importance: 7,
       })
-      assert(!memoryError, memoryError?.message || 'Unable to create smoke memory')
+      if (isMissingColumn(memoryError, 'importance')) {
+        const { error: fallbackMemoryError } = await supabase.from('memories').insert({
+          user_id: userId,
+          session_id: chatSessionId,
+          type: 'narrative',
+          content: 'Alpha smoke memory',
+          confidence: 1,
+        })
+        assert(!fallbackMemoryError, fallbackMemoryError?.message || 'Unable to create smoke memory')
+      } else {
+        assert(!memoryError, memoryError?.message || 'Unable to create smoke memory')
+      }
 
       const dashboard = await expectStatus('/api/dashboard', [200], {
         headers: { Cookie: cookieHeaderFromJar(cookieJar) },

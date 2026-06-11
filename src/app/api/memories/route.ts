@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { isMissingColumn } from '@/lib/api/errors'
 import { createClient } from '@/lib/supabase/server'
 
 const allowedTypes = new Set(['episodic', 'semantic', 'narrative'])
@@ -31,17 +32,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Memory content is required.' }, { status: 400 })
   }
 
-  const { data, error } = await supabase
+  const memoryRow = {
+    user_id: user.id,
+    type,
+    content,
+    confidence: 1,
+    importance: 7,
+  }
+  let { data, error } = await supabase
     .from('memories')
-    .insert({
-      user_id: user.id,
-      type,
-      content,
-      confidence: 1,
-      importance: 7,
-    })
+    .insert(memoryRow)
     .select()
     .single()
+  if (isMissingColumn(error, 'importance')) {
+    const { importance: _importance, ...fallbackRow } = memoryRow
+    ;({ data, error } = await supabase
+      .from('memories')
+      .insert(fallbackRow)
+      .select()
+      .single())
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

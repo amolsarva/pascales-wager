@@ -33,6 +33,12 @@ export function isMissingTableWrite(error: { code?: string; message?: string } |
   )
 }
 
+export function isMissingColumn(error: { code?: string; message?: string } | null | undefined, column: string) {
+  if (!error) return false
+  const message = error.message?.toLowerCase() || ''
+  return message.includes(column.toLowerCase()) && (error.code === 'PGRST204' || error.code === '42703')
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
-import { apiErrorResponse, isMissingTableWrite } from '@/lib/api/errors'
+import { apiErrorResponse, isMissingColumn, isMissingTableWrite } from '@/lib/api/errors'
 import { createClient } from '@/lib/supabase/server'
 import { advisors, type Advisor } from '@/lib/council-data'
 import { buildSystemPrompt, getRelevantContext } from '@/lib/memory/retrieval'
@@ -472,8 +472,7 @@ export async function POST(request: NextRequest) {
 
     if (responseError) throw responseError
 
-    const [{ error: sessionError }, { error: memoryError }] = await Promise.all([
-      supabase
+    const sessionUpdatePromise = supabase
         .from('sessions')
         .update({
           summary: synthesis.headline,
@@ -482,19 +481,32 @@ export async function POST(request: NextRequest) {
           updated_at: now,
         })
         .eq('id', conversationId)
-        .eq('user_id', user.id),
-      supabase
-        .from('memories')
-        .insert({
-          user_id: user.id,
-          session_id: conversationId,
-          type: 'episodic',
-          content: `Council question: ${question}`,
-          confidence: 0.86,
-          importance: 6,
-          source_message_ids: questionMessage?.id ? [questionMessage.id] : undefined,
-        }),
+        .eq('user_id', user.id)
+    const memoryRow = {
+      user_id: user.id,
+      session_id: conversationId,
+      type: 'episodic',
+      content: `Council question: ${question}`,
+      confidence: 0.86,
+      importance: 6,
+      source_message_ids: questionMessage?.id ? [questionMessage.id] : undefined,
+    }
+    const [sessionResult, memoryResult] = await Promise.all([
+      sessionUpdatePromise,
+      supabase.from('memories').insert(memoryRow),
     ])
+    const { error: sessionError } = sessionResult
+    let { error: memoryError } = memoryResult
+    let fallbackMemoryRow: Record<string, unknown> = memoryRow
+    if (isMissingColumn(memoryError, 'importance')) {
+      const { importance: _importance, ...fallbackRow } = memoryRow
+      fallbackMemoryRow = fallbackRow
+      ;({ error: memoryError } = await supabase.from('memories').insert(fallbackMemoryRow))
+    }
+    if (isMissingColumn(memoryError, 'source_message_ids')) {
+      const { source_message_ids: _sourceMessageIds, ...fallbackRow } = fallbackMemoryRow
+      ;({ error: memoryError } = await supabase.from('memories').insert(fallbackRow))
+    }
 
     if (sessionError && !isMissingTableWrite(sessionError, 'sessions')) throw sessionError
     if (memoryError) throw memoryError

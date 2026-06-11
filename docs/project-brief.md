@@ -47,12 +47,13 @@ Create a private AI council for reflective decision-making: users bring a real q
 - ~~Keep chat, Council, and summaries functional when `sessions` is readable but not writable through Supabase REST.~~ Done.
 - ~~Store Council advisor/synthesis records under the production-allowed `assistant` message role.~~ Done.
 - ~~Return transient generated summaries when `session_summaries` is readable but not writable.~~ Done.
+- ~~Omit optional memory columns such as `importance` when production schema lacks them.~~ Done.
 
 ## Open Requirements
 
 - Add advisor creation/editing backed by the `advisors` table.
 - Run the expanded authenticated smoke suite against the freshly deployed production build.
-- Decide whether to grant Supabase REST writes for `sessions` and `session_summaries`, or keep the current transient/fallback behavior.
+- Align the production Supabase schema with app expectations, or formally keep the current compatibility fallbacks.
 - Add production analytics and reliability monitoring.
 
 ## Production Hardening Sprint Completed
@@ -78,6 +79,7 @@ Focus: remove the main alpha breakage path and make production verification stro
 7. Added read-only `sessions` tolerance after Supabase REST accepted message writes but rejected `sessions` inserts.
 8. Adjusted Council persistence to respect the production `messages.role` constraint while retaining structured advisor/synthesis payloads.
 9. Added transient summary fallback after Supabase REST rejected `session_summaries` inserts.
+10. Added optional memory-column fallbacks after production rejected `memories.importance`.
 
 ## Roadmap
 

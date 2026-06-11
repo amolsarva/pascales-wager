@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
-import { apiErrorResponse, isMissingTableWrite } from '@/lib/api/errors'
+import { apiErrorResponse, isMissingColumn, isMissingTableWrite } from '@/lib/api/errors'
 import { createClient } from '@/lib/supabase/server'
 import {
   formatSummaryTranscript,
@@ -274,7 +274,12 @@ export async function POST(request: NextRequest) {
     if (sessionUpdateError && !isMissingTableWrite(sessionUpdateError, 'sessions')) throw sessionUpdateError
 
     if (memoryRows.length > 0) {
-      const { error: memoryError } = await supabase.from('memories').insert(memoryRows)
+      let { error: memoryError } = await supabase.from('memories').insert(memoryRows)
+      if (isMissingColumn(memoryError, 'importance')) {
+        ;({ error: memoryError } = await supabase
+          .from('memories')
+          .insert(memoryRows.map(({ importance: _importance, ...memory }) => memory)))
+      }
       if (memoryError) throw memoryError
     }
 
