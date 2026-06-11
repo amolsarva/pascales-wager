@@ -188,7 +188,7 @@ if (supabaseUrl && supabaseAnonKey && serviceRoleKey) {
         },
         {
           user_id: userId,
-          role: 'advisor',
+          role: 'assistant',
           content: JSON.stringify({
             kind: 'advisor',
             advisorId: 'damon',
@@ -200,7 +200,7 @@ if (supabaseUrl && supabaseAnonKey && serviceRoleKey) {
         },
         {
           user_id: userId,
-          role: 'synthesis',
+          role: 'assistant',
           content: JSON.stringify({
             kind: 'synthesis',
             headline: 'Alpha smoke Council headline',

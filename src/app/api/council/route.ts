@@ -133,19 +133,19 @@ function groupRounds(messages: StoredMessage[]): CouncilRound[] {
     const currentRound = rounds.at(-1)
     if (!currentRound) continue
 
-    if (message.role === 'advisor') {
-      const stored = parseStoredCouncilMessage(message.content)
+    const stored = parseStoredCouncilMessage(message.content)
+
+    if (message.role === 'advisor' || stored?.kind === 'advisor') {
       if (stored?.kind === 'advisor') {
         currentRound.responses.push({
           advisorId: stored.advisorId,
           content: stored.content,
         })
+        continue
       }
-      continue
     }
 
-    if (message.role === 'synthesis') {
-      const stored = parseStoredCouncilMessage(message.content)
+    if (message.role === 'synthesis' || stored?.kind === 'synthesis') {
       currentRound.synthesis = stored?.kind === 'synthesis'
         ? {
             headline: stored.headline,
@@ -331,7 +331,7 @@ export async function GET(request: NextRequest) {
         .select('id, role, content, created_at')
         .eq('user_id', user.id)
         .eq('conversation_id', conversationId)
-        .in('role', ['user', 'advisor', 'synthesis'])
+        .in('role', ['user', 'assistant', 'advisor', 'synthesis'])
         .order('created_at', { ascending: true })
 
       if (error) throw error
@@ -402,7 +402,7 @@ export async function POST(request: NextRequest) {
         .select('id, role, content, created_at')
         .eq('user_id', user.id)
         .eq('conversation_id', conversationId)
-        .in('role', ['user', 'advisor', 'synthesis'])
+        .in('role', ['user', 'assistant', 'advisor', 'synthesis'])
         .order('created_at', { ascending: true })
         .limit(80),
       supabase
@@ -452,14 +452,14 @@ export async function POST(request: NextRequest) {
     const responseRows = [
       ...responses.map((response) => ({
         user_id: user.id,
-        role: 'advisor',
+        role: 'assistant',
         content: JSON.stringify({ kind: 'advisor', ...response } satisfies StoredAdvisorMessage),
         conversation_id: conversationId,
         session_id: conversationId,
       })),
       {
         user_id: user.id,
-        role: 'synthesis',
+        role: 'assistant',
         content: JSON.stringify({ kind: 'synthesis', ...synthesis } satisfies StoredSynthesisMessage),
         conversation_id: conversationId,
         session_id: conversationId,

@@ -24,6 +24,7 @@
 - [x] Surface API failure messages in the chat stream UI.
 - [x] Populate Vercel production Supabase/OpenAI environment variables after discovering they were empty.
 - [x] Keep core chat/Council flows working when `sessions` is readable but not writable through Supabase REST.
+- [x] Store Council advisor/synthesis records under the production-allowed `assistant` message role.
 
 ## Current Roadmap
 

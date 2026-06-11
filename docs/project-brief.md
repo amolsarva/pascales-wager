@@ -45,6 +45,7 @@ Create a private AI council for reflective decision-making: users bring a real q
 - ~~Display chat API failure messages in the streaming UI instead of a generic quiet-room fallback.~~ Done.
 - ~~Populate Vercel production Supabase/OpenAI environment variables after discovering they were empty.~~ Done.
 - ~~Keep chat, Council, and summaries functional when `sessions` is readable but not writable through Supabase REST.~~ Done.
+- ~~Store Council advisor/synthesis records under the production-allowed `assistant` message role.~~ Done.
 
 ## Open Requirements
 
@@ -74,6 +75,7 @@ Focus: remove the main alpha breakage path and make production verification stro
 5. Added `npm run backfill:sessions` with `--dry-run` support for legacy message-only conversations.
 6. Fixed live Vercel environment configuration after production Supabase/OpenAI variables were found to be empty.
 7. Added read-only `sessions` tolerance after Supabase REST accepted message writes but rejected `sessions` inserts.
+8. Adjusted Council persistence to respect the production `messages.role` constraint while retaining structured advisor/synthesis payloads.
 
 ## Roadmap
 
