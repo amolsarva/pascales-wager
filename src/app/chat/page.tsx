@@ -176,7 +176,11 @@ function ChatPageInner() {
         }),
       })
 
-      if (!response.ok || !response.body) throw new Error('Unable to start stream')
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.error || 'Unable to start stream')
+      }
+      if (!response.body) throw new Error('Unable to start stream')
 
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
@@ -219,7 +223,9 @@ function ChatPageInner() {
           message.id === assistantMessage.id
             ? {
                 ...message,
-                content: 'The room is quiet for a moment. Please try again.',
+                content: error instanceof Error
+                  ? error.message
+                  : 'The room is quiet for a moment. Please try again.',
                 streaming: false,
               }
             : message

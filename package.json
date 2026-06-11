@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "smoke:alpha": "node scripts/alpha-smoke.mjs"
+    "smoke:alpha": "node scripts/alpha-smoke.mjs",
+    "backfill:sessions": "node scripts/backfill-sessions.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.65",

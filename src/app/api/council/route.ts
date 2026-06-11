@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { apiErrorResponse } from '@/lib/api/errors'
 import { createClient } from '@/lib/supabase/server'
 import { advisors, type Advisor } from '@/lib/council-data'
 import { buildSystemPrompt, getRelevantContext } from '@/lib/memory/retrieval'
@@ -83,6 +84,17 @@ function parseJson<T>(value: string): T | undefined {
 
 function isUuid(value: string | null): value is string {
   return Boolean(value && uuidPattern.test(value))
+}
+
+function isMissingMessageSessionId(error: { code?: string; message?: string } | null) {
+  if (!error) return false
+  const message = error.message?.toLowerCase() || ''
+  return message.includes('session_id') && (error.code === 'PGRST204' || error.code === '42703')
+}
+
+function omitMessageSessionId<T extends { session_id?: string }>(row: T) {
+  const { session_id: _sessionId, ...rest } = row
+  return rest
 }
 
 function toPreview(content: string, maxLength = 72) {
@@ -350,7 +362,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Council history error:', error)
-    return NextResponse.json({ error: 'Unable to load Council history.' }, { status: 500 })
+    return apiErrorResponse(error, 'Unable to load Council history.')
   }
 }
 
@@ -406,17 +418,26 @@ export async function POST(request: NextRequest) {
     const context = await getRelevantContext(user.id, question)
     const now = new Date().toISOString()
 
-    const { data: questionMessage, error: questionError } = await supabase
+    const questionRow = {
+      user_id: user.id,
+      role: 'user',
+      content: question,
+      conversation_id: conversationId,
+      session_id: conversationId,
+    }
+    let questionResult = await supabase
       .from('messages')
-      .insert({
-        user_id: user.id,
-        role: 'user',
-        content: question,
-        conversation_id: conversationId,
-        session_id: conversationId,
-      })
+      .insert(questionRow)
       .select('id, created_at')
       .single()
+    if (isMissingMessageSessionId(questionResult.error)) {
+      questionResult = await supabase
+        .from('messages')
+        .insert(omitMessageSessionId(questionRow))
+        .select('id, created_at')
+        .single()
+    }
+    const { data: questionMessage, error: questionError } = questionResult
 
     if (questionError) throw questionError
 
@@ -427,7 +448,7 @@ export async function POST(request: NextRequest) {
     )
     const synthesis = await synthesizeCouncil(question, responses)
 
-    const { error: responseError } = await supabase.from('messages').insert([
+    const responseRows = [
       ...responses.map((response) => ({
         user_id: user.id,
         role: 'advisor',
@@ -442,7 +463,11 @@ export async function POST(request: NextRequest) {
         conversation_id: conversationId,
         session_id: conversationId,
       },
-    ])
+    ]
+    let { error: responseError } = await supabase.from('messages').insert(responseRows)
+    if (isMissingMessageSessionId(responseError)) {
+      ;({ error: responseError } = await supabase.from('messages').insert(responseRows.map(omitMessageSessionId)))
+    }
 
     if (responseError) throw responseError
 
@@ -484,6 +509,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Council response error:', error)
-    return NextResponse.json({ error: 'The Council could not answer just now.' }, { status: 500 })
+    return apiErrorResponse(error, 'The Council could not answer just now. Please try again.')
   }
 }

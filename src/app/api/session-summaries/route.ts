@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { apiErrorResponse } from '@/lib/api/errors'
 import { createClient } from '@/lib/supabase/server'
 import {
   formatSummaryTranscript,
@@ -130,13 +131,14 @@ export async function GET(request: NextRequest) {
     if (error) throw error
 
     const sessionIds = Array.from(new Set((data || []).map((summary) => summary.session_id).filter(Boolean)))
-    const { data: sessions } = sessionIds.length
+    const { data: sessions, error: sessionsError } = sessionIds.length
       ? await supabase
           .from('sessions')
           .select('id, mode')
           .eq('user_id', user.id)
           .in('id', sessionIds)
       : { data: [] }
+    if (sessionsError) throw sessionsError
 
     const modeBySessionId = new Map((sessions || []).map((session) => [session.id, session.mode]))
     const summaries = (data || []).map((summary) => {
@@ -156,7 +158,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Session summary load error:', error)
-    return NextResponse.json({ error: 'Unable to load session summaries.' }, { status: 500 })
+    return apiErrorResponse(error, 'Unable to load session summaries.')
   }
 }
 
@@ -192,12 +194,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Not enough session content to summarize.' }, { status: 400 })
     }
 
-    const { data: existingSession } = await supabase
+    const { data: existingSession, error: existingSessionError } = await supabase
       .from('sessions')
       .select('mode')
       .eq('id', sessionId)
       .eq('user_id', user.id)
       .maybeSingle()
+    if (existingSessionError) throw existingSessionError
 
     const mode = existingSession?.mode === 'council' ? 'council' : 'freeform'
     await ensureSession(supabase, user.id, sessionId, mode, firstUserMessage(sessionMessages))
@@ -252,6 +255,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ summary, generated })
   } catch (error) {
     console.error('Session summary generation error:', error)
-    return NextResponse.json({ error: 'Unable to summarize this session.' }, { status: 500 })
+    return apiErrorResponse(error, 'Unable to summarize this session. Please try again.')
   }
 }

@@ -17,15 +17,19 @@
 - [x] Remove temporary Council degraded mode after production Supabase schema setup.
 - [x] Add onboarding redirect enforcement for incomplete profiles.
 - [x] Add alpha smoke checks for schema, protected redirects, public pages, and private API auth.
+- [x] Add authenticated smoke checks for chat, Council, summaries, dashboard, and timeline.
+- [x] Add schema-tolerant message persistence for production databases without `messages.session_id`.
+- [x] Add a `backfill:sessions` operator script for legacy message-only conversations.
+- [x] Add resilient failure payloads for OpenAI/Supabase errors in chat, Council, and summaries.
+- [x] Surface API failure messages in the chat stream UI.
 
 ## Current Roadmap
 
-- [ ] Add authenticated smoke checks for chat, Council, summaries, dashboard, and timeline.
-- [ ] Backfill old message-only conversations into `sessions` more aggressively.
-- [ ] Add resilient failure states for OpenAI/Supabase errors.
+- [ ] Run the expanded alpha smoke against the freshly deployed production build.
+- [ ] Add advisor creation/editing backed by the `advisors` table.
+- [ ] Add production analytics and reliability monitoring.
+- [ ] Decide whether to migrate production `messages` to include `session_id` or keep `conversation_id` as the canonical join.
 
 ## Later
 
-- [ ] Add advisor creation/editing backed by the `advisors` table.
-- [ ] Add production analytics and reliability monitoring.
 - [ ] Add export/share workflows once the private record model is stable.

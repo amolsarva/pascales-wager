@@ -66,13 +66,26 @@ async function expectStatus(path, expected, init) {
   const response = await fetch(`${baseUrl}${path}`, { redirect: 'manual', ...init })
   assert(
     expected.includes(response.status),
-    `${path} returned ${response.status}; expected ${expected.join(' or ')}`
+    `${path} returned ${response.status}; expected ${expected.join(' or ')}; location=${response.headers.get('location') || 'none'}`
   )
   return response
 }
 
 function cookieHeaderFromJar(cookieJar) {
-  return Array.from(cookieJar.entries()).map(([name, value]) => `${name}=${value}`).join('; ')
+  return Array.from(cookieJar.entries())
+    .map(([name, value]) => `${name}=${encodeURIComponent(value)}`)
+    .join('; ')
+}
+
+function isMissingMessageSessionId(error) {
+  if (!error) return false
+  const message = (error.message || '').toLowerCase()
+  return message.includes('session_id') && (error.code === 'PGRST204' || error.code === '42703')
+}
+
+function omitMessageSessionId(row) {
+  const { session_id: _sessionId, ...rest } = row
+  return rest
 }
 
 await check('Supabase env available', async () => {
@@ -100,6 +113,8 @@ if (supabaseUrl && supabaseAnonKey && serviceRoleKey) {
     assert(!createError, createError?.message || 'Unable to create smoke user')
     const userId = created.user?.id
     assert(Boolean(userId), 'Smoke user id missing')
+    const chatSessionId = crypto.randomUUID()
+    const councilSessionId = crypto.randomUUID()
 
     try {
       const { error: profileError } = await supabase
@@ -144,15 +159,120 @@ if (supabaseUrl && supabaseAnonKey && serviceRoleKey) {
         headers: { Cookie: cookieHeaderFromJar(cookieJar) },
       })
 
-      await expectStatus('/api/dashboard', [200], {
+      const now = new Date().toISOString()
+      const { error: chatSessionError } = await supabase.from('sessions').insert({
+        id: chatSessionId,
+        user_id: userId,
+        mode: 'freeform',
+        title: 'Alpha smoke chat',
+        summary: 'Alpha smoke summary',
+        status: 'active',
+      })
+      assert(!chatSessionError, chatSessionError?.message || 'Unable to create smoke chat session')
+
+      const { error: councilSessionError } = await supabase.from('sessions').insert({
+        id: councilSessionId,
+        user_id: userId,
+        mode: 'council',
+        title: 'Alpha smoke council',
+        summary: 'Alpha smoke council summary',
+        status: 'active',
+      })
+      assert(!councilSessionError, councilSessionError?.message || 'Unable to create smoke Council session')
+
+      const messageRows = [
+        {
+          user_id: userId,
+          role: 'user',
+          content: 'Alpha smoke question',
+          conversation_id: chatSessionId,
+          session_id: chatSessionId,
+          created_at: now,
+        },
+        {
+          user_id: userId,
+          role: 'assistant',
+          content: 'Alpha smoke answer',
+          conversation_id: chatSessionId,
+          session_id: chatSessionId,
+          created_at: now,
+        },
+        {
+          user_id: userId,
+          role: 'user',
+          content: 'Alpha smoke Council question',
+          conversation_id: councilSessionId,
+          session_id: councilSessionId,
+          created_at: now,
+        },
+      ]
+      let { error: messageError } = await supabase.from('messages').insert(messageRows)
+      if (isMissingMessageSessionId(messageError)) {
+        ;({ error: messageError } = await supabase.from('messages').insert(messageRows.map(omitMessageSessionId)))
+      }
+      assert(!messageError, messageError?.message || 'Unable to create smoke messages')
+
+      const { error: summaryError } = await supabase.from('session_summaries').insert({
+        session_id: chatSessionId,
+        user_id: userId,
+        summary: 'Alpha smoke session summary',
+        key_points: ['Private reads work'],
+        next_actions: ['Keep hardening alpha'],
+        memories_to_save: ['Smoke test user has a durable record'],
+        follow_up_question: 'What should be checked next?',
+      })
+      assert(!summaryError, summaryError?.message || 'Unable to create smoke summary')
+
+      const { error: memoryError } = await supabase.from('memories').insert({
+        user_id: userId,
+        session_id: chatSessionId,
+        type: 'narrative',
+        content: 'Alpha smoke memory',
+        confidence: 1,
+        importance: 7,
+      })
+      assert(!memoryError, memoryError?.message || 'Unable to create smoke memory')
+
+      const dashboard = await expectStatus('/api/dashboard', [200], {
         headers: { Cookie: cookieHeaderFromJar(cookieJar) },
       })
+      const dashboardData = await dashboard.json()
+      assert(dashboardData.counts?.conversations >= 1, 'Dashboard did not see seeded conversation')
+      assert(dashboardData.counts?.memories >= 1, 'Dashboard did not see seeded memory')
+
+      const chatHistory = await expectStatus(`/api/sessions?conversationId=${chatSessionId}`, [200], {
+        headers: { Cookie: cookieHeaderFromJar(cookieJar) },
+      })
+      const chatHistoryData = await chatHistory.json()
+      assert(chatHistoryData.messages?.length >= 2, 'Session API did not return seeded chat messages')
+
+      const summaries = await expectStatus(`/api/session-summaries?sessionId=${chatSessionId}`, [200], {
+        headers: { Cookie: cookieHeaderFromJar(cookieJar) },
+      })
+      const summaryData = await summaries.json()
+      assert(summaryData.summary?.summary === 'Alpha smoke session summary', 'Summary API did not return seeded summary')
+
+      const synthesis = await expectStatus('/api/synthesis', [200], {
+        headers: { Cookie: cookieHeaderFromJar(cookieJar) },
+      })
+      const synthesisData = await synthesis.json()
+      assert(synthesisData.memories?.some((memory) => memory.content === 'Alpha smoke memory'), 'Synthesis API did not return seeded memory')
 
       await expectStatus('/api/council', [200], {
         headers: { Cookie: cookieHeaderFromJar(cookieJar) },
       })
+
+      await expectStatus('/timeline', [200], {
+        headers: { Cookie: cookieHeaderFromJar(cookieJar) },
+      })
     } finally {
       if (userId) {
+        await supabase.from('session_summaries').delete().eq('user_id', userId)
+        await supabase.from('memories').delete().eq('user_id', userId)
+        await supabase.from('messages').delete().eq('user_id', userId)
+        await supabase.from('rituals').delete().eq('user_id', userId)
+        await supabase.from('sessions').delete().eq('user_id', userId)
+        await supabase.from('users').delete().eq('id', userId)
         await supabase.auth.admin.deleteUser(userId)
       }
     }
