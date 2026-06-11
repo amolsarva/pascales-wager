@@ -247,26 +247,27 @@ if (supabaseUrl && supabaseAnonKey && serviceRoleKey) {
         assert(!summaryError, summaryError?.message || 'Unable to create smoke summary')
       }
 
-      const { error: memoryError } = await supabase.from('memories').insert({
+      const smokeMemoryRow = {
         user_id: userId,
         session_id: chatSessionId,
         type: 'narrative',
         content: 'Alpha smoke memory',
         confidence: 1,
         importance: 7,
-      })
-      if (isMissingColumn(memoryError, 'importance')) {
-        const { error: fallbackMemoryError } = await supabase.from('memories').insert({
-          user_id: userId,
-          session_id: chatSessionId,
-          type: 'narrative',
-          content: 'Alpha smoke memory',
-          confidence: 1,
-        })
-        assert(!fallbackMemoryError, fallbackMemoryError?.message || 'Unable to create smoke memory')
-      } else {
-        assert(!memoryError, memoryError?.message || 'Unable to create smoke memory')
       }
+      let { error: memoryError } = await supabase.from('memories').insert(smokeMemoryRow)
+      let fallbackSmokeMemoryRow = smokeMemoryRow
+      if (isMissingColumn(memoryError, 'importance')) {
+        const { importance: _importance, ...fallbackRow } = fallbackSmokeMemoryRow
+        fallbackSmokeMemoryRow = fallbackRow
+        ;({ error: memoryError } = await supabase.from('memories').insert(fallbackSmokeMemoryRow))
+      }
+      if (isMissingColumn(memoryError, 'session_id')) {
+        const { session_id: _sessionId, ...fallbackRow } = fallbackSmokeMemoryRow
+        fallbackSmokeMemoryRow = fallbackRow
+        ;({ error: memoryError } = await supabase.from('memories').insert(fallbackSmokeMemoryRow))
+      }
+      assert(!memoryError, memoryError?.message || 'Unable to create smoke memory')
 
       const dashboard = await expectStatus('/api/dashboard', [200], {
         headers: { Cookie: cookieHeaderFromJar(cookieJar) },

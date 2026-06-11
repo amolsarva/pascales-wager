@@ -26,7 +26,7 @@
 - [x] Keep core chat/Council flows working when `sessions` is readable but not writable through Supabase REST.
 - [x] Store Council advisor/synthesis records under the production-allowed `assistant` message role.
 - [x] Return transient generated summaries when `session_summaries` is readable but not writable.
-- [x] Omit optional memory columns such as `importance` when production schema lacks them.
+- [x] Omit optional memory columns such as `importance` and `session_id` when production schema lacks them.
 
 ## Current Roadmap
 

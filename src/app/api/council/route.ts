@@ -503,6 +503,11 @@ export async function POST(request: NextRequest) {
       fallbackMemoryRow = fallbackRow
       ;({ error: memoryError } = await supabase.from('memories').insert(fallbackMemoryRow))
     }
+    if (isMissingColumn(memoryError, 'session_id')) {
+      const { session_id: _sessionId, ...fallbackRow } = fallbackMemoryRow
+      fallbackMemoryRow = fallbackRow
+      ;({ error: memoryError } = await supabase.from('memories').insert(fallbackMemoryRow))
+    }
     if (isMissingColumn(memoryError, 'source_message_ids')) {
       const { source_message_ids: _sourceMessageIds, ...fallbackRow } = fallbackMemoryRow
       ;({ error: memoryError } = await supabase.from('memories').insert(fallbackRow))

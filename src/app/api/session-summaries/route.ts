@@ -275,10 +275,18 @@ export async function POST(request: NextRequest) {
 
     if (memoryRows.length > 0) {
       let { error: memoryError } = await supabase.from('memories').insert(memoryRows)
+      let fallbackMemoryRows: Record<string, unknown>[] = memoryRows
       if (isMissingColumn(memoryError, 'importance')) {
+        fallbackMemoryRows = fallbackMemoryRows.map(({ importance: _importance, ...memory }) => memory)
         ;({ error: memoryError } = await supabase
           .from('memories')
-          .insert(memoryRows.map(({ importance: _importance, ...memory }) => memory)))
+          .insert(fallbackMemoryRows))
+      }
+      if (isMissingColumn(memoryError, 'session_id')) {
+        fallbackMemoryRows = fallbackMemoryRows.map(({ session_id: _sessionId, ...memory }) => memory)
+        ;({ error: memoryError } = await supabase
+          .from('memories')
+          .insert(fallbackMemoryRows))
       }
       if (memoryError) throw memoryError
     }
