@@ -197,7 +197,9 @@ export async function GET() {
   if (sessionsResult.error && !isMissingTableWrite(sessionsResult.error, 'sessions')) {
     return NextResponse.json({ error: sessionsResult.error.message }, { status: 500 })
   }
-  if (sessionSummariesResult.error) return NextResponse.json({ error: sessionSummariesResult.error.message }, { status: 500 })
+  if (sessionSummariesResult.error && !isMissingTableWrite(sessionSummariesResult.error, 'session_summaries')) {
+    return NextResponse.json({ error: sessionSummariesResult.error.message }, { status: 500 })
+  }
 
   const messages = (messagesResult.data || []) as UserMessage[]
   const memories = (memoriesResult.data || []) as MemoryRow[]
