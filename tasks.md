@@ -23,7 +23,7 @@
 - [x] Add resilient failure payloads for OpenAI/Supabase errors in chat, Council, and summaries.
 - [x] Surface API failure messages in the chat stream UI.
 - [x] Populate Vercel production Supabase/OpenAI environment variables after discovering they were empty.
-- [x] Keep core chat/Council flows working when `sessions` is readable but not writable through Supabase REST.
+- [x] Keep core chat/Council flows working when `sessions` is unavailable through authenticated Supabase REST.
 - [x] Store Council advisor/synthesis records under the production-allowed `assistant` message role.
 - [x] Return transient generated summaries when `session_summaries` is readable but not writable.
 - [x] Omit optional memory columns such as `importance` and `session_id` when production schema lacks them.

@@ -64,9 +64,10 @@ function assert(condition, message) {
 
 async function expectStatus(path, expected, init) {
   const response = await fetch(`${baseUrl}${path}`, { redirect: 'manual', ...init })
+  const body = expected.includes(response.status) ? '' : await response.clone().text().catch(() => '')
   assert(
     expected.includes(response.status),
-    `${path} returned ${response.status}; expected ${expected.join(' or ')}; location=${response.headers.get('location') || 'none'}`
+    `${path} returned ${response.status}; expected ${expected.join(' or ')}; location=${response.headers.get('location') || 'none'}; body=${body.slice(0, 240)}`
   )
   return response
 }

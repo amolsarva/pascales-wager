@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { isMissingTableWrite } from '@/lib/api/errors'
 import { createClient } from '@/lib/supabase/server'
 
 type StoredMessage = {
@@ -35,12 +36,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid conversation id' }, { status: 400 })
     }
 
-    const { data: session } = await supabase
+    const { data: session, error: sessionError } = await supabase
       .from('sessions')
       .select('mode')
       .eq('user_id', user.id)
       .eq('id', conversationId)
       .maybeSingle()
+    if (sessionError && !isMissingTableWrite(sessionError, 'sessions')) {
+      return NextResponse.json({ error: sessionError.message }, { status: 500 })
+    }
 
     if (session?.mode === 'council') {
       return NextResponse.json({ error: 'Open Council threads from the Council room' }, { status: 400 })
@@ -83,7 +87,9 @@ export async function GET(request: NextRequest) {
   ])
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  if (sessionError) return NextResponse.json({ error: sessionError.message }, { status: 500 })
+  if (sessionError && !isMissingTableWrite(sessionError, 'sessions')) {
+    return NextResponse.json({ error: sessionError.message }, { status: 500 })
+  }
 
   const councilConversationIds = new Set(
     ((sessionRows || []) as SessionRow[])

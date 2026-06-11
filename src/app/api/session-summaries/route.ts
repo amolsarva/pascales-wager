@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
           .eq('user_id', user.id)
           .in('id', sessionIds)
       : { data: [] }
-    if (sessionsError) throw sessionsError
+    if (sessionsError && !isMissingTableWrite(sessionsError, 'sessions')) throw sessionsError
 
     const modeBySessionId = new Map((sessions || []).map((session) => [session.id, session.mode]))
     const summaries = (data || []).map((summary) => {

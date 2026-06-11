@@ -200,7 +200,7 @@ async function ensureCouncilSession(
     .eq('user_id', userId)
     .maybeSingle()
 
-  if (existingError) throw existingError
+  if (existingError && !isMissingTableWrite(existingError, 'sessions')) throw existingError
 
   if (!existing) {
     const { error } = await supabase.from('sessions').insert({
@@ -350,7 +350,7 @@ export async function GET(request: NextRequest) {
       .order('updated_at', { ascending: false })
       .limit(12)
 
-    if (error) throw error
+    if (error && !isMissingTableWrite(error, 'sessions')) throw error
 
     return NextResponse.json({
       conversations: ((data || []) as CouncilSession[]).map((session) => ({

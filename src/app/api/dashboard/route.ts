@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { isMissingTableWrite } from '@/lib/api/errors'
 import { createClient } from '@/lib/supabase/server'
 
 type UserMessage = {
@@ -193,7 +194,9 @@ export async function GET() {
   if (memoriesResult.error) return NextResponse.json({ error: memoriesResult.error.message }, { status: 500 })
   if (summariesResult.error) return NextResponse.json({ error: summariesResult.error.message }, { status: 500 })
   if (ritualsResult.error) return NextResponse.json({ error: ritualsResult.error.message }, { status: 500 })
-  if (sessionsResult.error) return NextResponse.json({ error: sessionsResult.error.message }, { status: 500 })
+  if (sessionsResult.error && !isMissingTableWrite(sessionsResult.error, 'sessions')) {
+    return NextResponse.json({ error: sessionsResult.error.message }, { status: 500 })
+  }
   if (sessionSummariesResult.error) return NextResponse.json({ error: sessionSummariesResult.error.message }, { status: 500 })
 
   const messages = (messagesResult.data || []) as UserMessage[]

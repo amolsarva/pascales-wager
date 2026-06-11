@@ -44,7 +44,7 @@ Create a private AI council for reflective decision-making: users bring a real q
 - ~~Return user-facing OpenAI/Supabase failure payloads from chat, Council, and summary endpoints.~~ Done.
 - ~~Display chat API failure messages in the streaming UI instead of a generic quiet-room fallback.~~ Done.
 - ~~Populate Vercel production Supabase/OpenAI environment variables after discovering they were empty.~~ Done.
-- ~~Keep chat, Council, and summaries functional when `sessions` is readable but not writable through Supabase REST.~~ Done.
+- ~~Keep chat, Council, and summaries functional when `sessions` is unavailable through authenticated Supabase REST.~~ Done.
 - ~~Store Council advisor/synthesis records under the production-allowed `assistant` message role.~~ Done.
 - ~~Return transient generated summaries when `session_summaries` is readable but not writable.~~ Done.
 - ~~Omit optional memory columns such as `importance` and `session_id` when production schema lacks them.~~ Done.
@@ -76,7 +76,7 @@ Focus: remove the main alpha breakage path and make production verification stro
 4. Expanded `npm run smoke:alpha` to create a temporary authenticated user, seed a realistic private record, and verify dashboard, session loading, summaries, synthesis/memory reads, Council history, and timeline access.
 5. Added `npm run backfill:sessions` with `--dry-run` support for legacy message-only conversations.
 6. Fixed live Vercel environment configuration after production Supabase/OpenAI variables were found to be empty.
-7. Added read-only `sessions` tolerance after Supabase REST accepted message writes but rejected `sessions` inserts.
+7. Added `sessions` tolerance after Supabase REST accepted message writes but rejected authenticated `sessions` reads/writes.
 8. Adjusted Council persistence to respect the production `messages.role` constraint while retaining structured advisor/synthesis payloads.
 9. Added transient summary fallback after Supabase REST rejected `session_summaries` inserts.
 10. Added optional memory-column fallbacks after production rejected `memories.importance` and `memories.session_id`.
