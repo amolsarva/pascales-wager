@@ -27,11 +27,14 @@
 - [x] Store Council advisor/synthesis records under the production-allowed `assistant` message role.
 - [x] Return transient generated summaries when `session_summaries` is readable but not writable.
 - [x] Omit optional memory columns such as `importance` and `session_id` when production schema lacks them.
+- [x] Add authenticated custom advisor API endpoints.
+- [x] Replace the static Advisors page with a create/edit custom advisor workflow.
+- [x] Add Supabase alpha readiness SQL for sessions, summaries, memories, and advisors.
+- [x] Add `npm run audit:schema` for production schema capability checks.
 
 ## Current Roadmap
 
 - [ ] Run the expanded alpha smoke against the freshly deployed production build.
-- [ ] Add advisor creation/editing backed by the `advisors` table.
 - [ ] Add production analytics and reliability monitoring.
 - [ ] Align the production Supabase schema with app expectations, or formally keep the current compatibility fallbacks.
 

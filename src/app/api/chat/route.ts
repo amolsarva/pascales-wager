@@ -4,7 +4,7 @@ import { apiErrorResponse, isMissingTableWrite } from '@/lib/api/errors'
 import { createClient } from '@/lib/supabase/server'
 import { getRelevantContext, buildSystemPrompt } from '@/lib/memory/retrieval'
 import { extractMemoriesFromConversation } from '@/lib/memory/extraction'
-import { advisors } from '@/lib/council-data'
+import { advisors, type Advisor } from '@/lib/council-data'
 
 let openai: OpenAI | undefined
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -16,6 +16,45 @@ function getOpenAI() {
 
 function toPreview(content: string, maxLength = 96) {
   return content.length > maxLength ? `${content.slice(0, maxLength)}...` : content
+}
+
+function customAdvisorFromRow(row: Record<string, unknown>): Advisor {
+  const name = typeof row.name === 'string' ? row.name : 'Custom Advisor'
+
+  return {
+    id: typeof row.id === 'string' ? row.id : 'custom',
+    name,
+    archetype: typeof row.archetype === 'string' ? row.archetype : 'Custom Advisor',
+    monogram: typeof row.monogram === 'string' ? row.monogram : name.slice(0, 1).toUpperCase(),
+    tone: typeof row.tone === 'string' ? row.tone : 'Clear, grounded, specific',
+    bestFor: typeof row.best_for === 'string' ? row.best_for : 'Tailored reflection',
+    description: typeof row.description === 'string' ? row.description : 'A custom advisor shaped by the user.',
+    accent: typeof row.accent === 'string' ? row.accent : '#B98A57',
+    shadow: typeof row.shadow === 'string' ? row.shadow : '#34241C',
+    worldview: typeof row.worldview === 'string' ? row.worldview : 'User-defined',
+    lastAsked: 'Custom',
+  }
+}
+
+async function resolveAdvisor(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  advisorId: unknown
+) {
+  const requested = typeof advisorId === 'string' ? advisorId : ''
+  const defaultAdvisor = advisors.find((item) => item.id === requested)
+  if (defaultAdvisor) return defaultAdvisor
+  if (!requested) return advisors[0]
+
+  const { data, error } = await supabase
+    .from('advisors')
+    .select('id, name, archetype, monogram, tone, best_for, description, accent, shadow, worldview')
+    .eq('id', requested)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error) return advisors[0]
+  return data ? customAdvisorFromRow(data as Record<string, unknown>) : advisors[0]
 }
 
 function logDeferredWriteError(error: unknown) {
@@ -47,7 +86,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No messages provided' }, { status: 400 })
     }
 
-    const advisor = advisors.find((item) => item.id === advisorId) ?? advisors[0]
+    const advisor = await resolveAdvisor(supabase, user.id, advisorId)
     const safeConversationId = typeof conversationId === 'string' && uuidPattern.test(conversationId)
       ? conversationId
       : crypto.randomUUID()

@@ -48,10 +48,12 @@ Create a private AI council for reflective decision-making: users bring a real q
 - ~~Store Council advisor/synthesis records under the production-allowed `assistant` message role.~~ Done.
 - ~~Return transient generated summaries when `session_summaries` is readable but not writable.~~ Done.
 - ~~Omit optional memory columns such as `importance` and `session_id` when production schema lacks them.~~ Done.
+- ~~Add authenticated custom advisor API endpoints.~~ Done.
+- ~~Replace the static Advisors page with a create/edit custom advisor workflow.~~ Done.
+- ~~Add Supabase alpha readiness SQL and a schema-audit script for production capability checks.~~ Done.
 
 ## Open Requirements
 
-- Add advisor creation/editing backed by the `advisors` table.
 - Run the expanded authenticated smoke suite against the freshly deployed production build.
 - Align the production Supabase schema with app expectations, or formally keep the current compatibility fallbacks.
 - Add production analytics and reliability monitoring.
@@ -81,6 +83,16 @@ Focus: remove the main alpha breakage path and make production verification stro
 9. Added transient summary fallback after Supabase REST rejected `session_summaries` inserts.
 10. Added optional memory-column fallbacks after production rejected `memories.importance` and `memories.session_id`.
 
+## Advisor Management Sprint Completed
+
+Focus: ship the custom-advisor surface and make the remaining Supabase work explicit.
+
+1. Added authenticated `/api/advisors` endpoints for listing, creating, editing, and archiving custom advisors.
+2. Replaced the static `/advisors` page with a real create/edit workflow and schema-unavailable warning.
+3. Wired single-advisor chat to resolve saved custom advisors when the advisors table is available.
+4. Added `docs/supabase-alpha-readiness.sql` to align production Supabase tables, grants, RLS policies, and optional columns with app expectations.
+5. Added `npm run audit:schema` to verify production write/read capabilities before smoke testing.
+
 ## Roadmap
 
 ### Next Alpha Candidate
@@ -88,10 +100,10 @@ Focus: remove the main alpha breakage path and make production verification stro
 Focus: make the alpha administrable and observable.
 
 1. Run the expanded smoke suite after each production deploy and wire it into a release checklist.
-2. Add advisor creation/editing backed by the `advisors` table.
+2. Run `docs/supabase-alpha-readiness.sql` in production Supabase and confirm `npm run audit:schema` passes.
 3. Add production analytics and reliability monitoring.
 4. Make onboarding status visible on Home and profile-dependent prompts.
-5. Choose and document the long-term session model: grant table writes or standardize on `conversation_id` plus transient summaries.
+5. Expand custom advisors into Council selection after the advisors table is live.
 
 ### Later
 

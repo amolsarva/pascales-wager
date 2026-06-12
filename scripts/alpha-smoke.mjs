@@ -26,8 +26,10 @@ const protectedPages = ['/home', '/chat', '/council', '/mirror', '/timeline', '/
 const privateApis = [
   { method: 'GET', path: '/api/dashboard' },
   { method: 'GET', path: '/api/council' },
+  { method: 'GET', path: '/api/advisors' },
   { method: 'GET', path: '/api/session-summaries' },
   { method: 'POST', path: '/api/chat', body: {} },
+  { method: 'POST', path: '/api/advisors', body: {} },
   { method: 'POST', path: '/api/session-summaries', body: {} },
 ]
 
@@ -300,6 +302,12 @@ if (supabaseUrl && supabaseAnonKey && serviceRoleKey) {
       await expectStatus('/api/council', [200], {
         headers: { Cookie: cookieHeaderFromJar(cookieJar) },
       })
+
+      const advisorDirectory = await expectStatus('/api/advisors', [200], {
+        headers: { Cookie: cookieHeaderFromJar(cookieJar) },
+      })
+      const advisorDirectoryData = await advisorDirectory.json()
+      assert(advisorDirectoryData.advisors?.length >= 5, 'Advisor API did not return built-in advisors')
 
       const councilHistory = await expectStatus(`/api/council?conversationId=${councilSessionId}`, [200], {
         headers: { Cookie: cookieHeaderFromJar(cookieJar) },
