@@ -18,7 +18,10 @@ export async function updateSession(request: NextRequest) {
           )
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, {
+              ...options,
+              maxAge: 30 * 24 * 60 * 60, // persist session 30 days across browser restarts
+            })
           )
         },
       },
@@ -31,7 +34,8 @@ export async function updateSession(request: NextRequest) {
 
   const isPublicPath =
     request.nextUrl.pathname.startsWith('/auth') ||
-    request.nextUrl.pathname === '/'
+    request.nextUrl.pathname === '/' ||
+    request.nextUrl.pathname === '/welcome'
 
   if (!user && !isPublicPath) {
     const url = request.nextUrl.clone()
