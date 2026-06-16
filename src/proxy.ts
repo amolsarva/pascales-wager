@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 const protectedRoutes = [
   '/home',
+  '/admin',
   '/chat',
   '/council',
   '/mirror',
@@ -92,6 +93,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     '/home/:path*',
+    '/admin/:path*',
     '/chat/:path*',
     '/council/:path*',
     '/mirror/:path*',

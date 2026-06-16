@@ -22,7 +22,7 @@ const requiredTables = [
 ]
 
 const publicPages = ['/', '/auth/login', '/auth/signup']
-const protectedPages = ['/home', '/chat', '/council', '/mirror', '/timeline', '/rituals']
+const protectedPages = ['/home', '/admin', '/chat', '/council', '/mirror', '/timeline', '/rituals']
 const privateApis = [
   { method: 'GET', path: '/api/dashboard' },
   { method: 'GET', path: '/api/council' },

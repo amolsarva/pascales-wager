@@ -1,9 +1,9 @@
 import Link from 'next/link'
-import { BookOpen, Home, MessageCircle, Settings2, UsersRound } from 'lucide-react'
+import { BookOpen, Flame, Home, MessageCircle, Settings2, UsersRound } from 'lucide-react'
 import { CouncilLogo } from '@/components/council-logo'
 
 type AppNavigationProps = {
-  active?: 'home' | 'advisors' | 'council' | 'sessions' | 'settings'
+  active?: 'home' | 'advisors' | 'council' | 'sessions' | 'settings' | 'admin'
 }
 
 const items = [
@@ -13,6 +13,8 @@ const items = [
   { id: 'sessions', label: 'Sessions', href: '/timeline', icon: MessageCircle },
   { id: 'settings', label: 'Settings', href: '/mirror', icon: Settings2 },
 ] as const
+
+const adminItem = { id: 'admin', label: 'Admin', href: '/admin', icon: Flame } as const
 
 export function AppNavigation({ active }: AppNavigationProps) {
   return (
@@ -33,11 +35,25 @@ export function AppNavigation({ active }: AppNavigationProps) {
           ))}
         </nav>
 
-        <div className="mt-auto rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold/70">Private by design</p>
-          <p className="mt-2 text-xs leading-5 text-mist">
-            Your memories remain yours. Review, edit, or remove them at any time.
-          </p>
+        <div className="mt-auto">
+          <Link
+            href={adminItem.href}
+            className={`mb-4 flex items-center gap-2 rounded-xl border px-3 py-2.5 text-[11px] font-black uppercase tracking-[0.18em] transition ${
+              active === 'admin'
+                ? 'border-[#ff9b45]/45 bg-[#ff8a2a]/18 text-[#ffb26f]'
+                : 'border-[#ff8a2a]/25 bg-[#ff8a2a]/10 text-[#ff9b45] hover:border-[#ff9b45]/45 hover:bg-[#ff8a2a]/16'
+            }`}
+          >
+            <Flame size={15} strokeWidth={1.8} />
+            <span>ADMIN</span>
+          </Link>
+
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold/70">Private by design</p>
+            <p className="mt-2 text-xs leading-5 text-mist">
+              Your memories remain yours. Review, edit, or remove them at any time.
+            </p>
+          </div>
         </div>
 
         <div className="mt-5 flex items-center gap-3 px-1">
@@ -64,6 +80,17 @@ export function AppNavigation({ active }: AppNavigationProps) {
             <span>{label}</span>
           </Link>
         ))}
+        <Link
+          href={adminItem.href}
+          className={`flex min-w-16 flex-col items-center gap-1 rounded-xl border px-2 py-1.5 text-[10px] font-black uppercase tracking-[0.08em] transition ${
+            active === 'admin'
+              ? 'border-[#ff9b45]/45 bg-[#ff8a2a]/18 text-[#ffb26f]'
+              : 'border-[#ff8a2a]/25 bg-[#ff8a2a]/10 text-[#ff9b45]'
+          }`}
+        >
+          <Flame size={18} strokeWidth={active === 'admin' ? 2 : 1.5} />
+          <span>ADMIN</span>
+        </Link>
       </nav>
     </>
   )
