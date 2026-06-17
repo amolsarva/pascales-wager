@@ -29,10 +29,10 @@ const adminGroups: Array<{ title: string; description: string; links: AdminLink[
     links: [
       {
         title: 'Onboard a new user',
-        href: '/auth/signup',
-        description: 'Create a new account and send the user through first-run onboarding.',
+        href: '/admin/onboard',
+        description: 'Create or invite a Supabase auth user and reset their profile to first-run onboarding.',
         icon: UserPlus,
-        badge: 'Signup',
+        badge: 'Create user',
       },
       {
         title: 'Onboarding screen',
